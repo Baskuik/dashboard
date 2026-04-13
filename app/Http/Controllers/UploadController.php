@@ -19,24 +19,26 @@ class UploadController extends Controller
         $file = $request->file('file');
         $fileName = $file->getClientOriginalName();
 
-        // Sla het bestand eerst op in storage
-        $file->storeAs('uploads', $fileName, 'local');
+        // Sla het bestand op en gebruik het opgeslagen pad
+        $storedPath = $file->storeAs('uploads', $fileName, 'local');
+        $absolutePath = storage_path('app/' . $storedPath);  // ← gebruik dit
 
-        // Maak upload record aan met status 'processing'
+        // Maak upload record aan met status 'pending'
+        // (de importer zet dit zelf op 'processing' en daarna 'completed'/'declined')
         $upload = Upload::create([
             'user_id' => Auth::id(),
             'filename' => $fileName,
-            'status' => 'processing',
+            'status' => 'pending',
             'processed_rows' => 0,
         ]);
 
         try {
             $importer = new RecordsImport($upload, Auth::id());
-            $count = $importer->import($file->getRealPath());
+            $count = $importer->import($absolutePath); // ← niet meer getRealPath()
 
-            // Upload markeren als voltooid
+            // Upload bijwerken met het aantal verwerkte rijen
             $upload->update([
-                'status' => 'completed',
+                'status' => $count > 0 ? 'completed' : 'declined',
                 'processed_rows' => $count,
             ]);
 
