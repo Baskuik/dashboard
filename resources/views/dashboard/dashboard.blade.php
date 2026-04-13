@@ -125,25 +125,93 @@
                 </div>
             </form>
 
+            <!-- Modal Backdrop -->
+            <div id="confirm-modal-backdrop"
+                class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-200"></div>
+
+            <!-- Confirmation Modal -->
+            <div id="confirm-modal"
+                class="hidden fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200">
+                <div
+                    class="bg-[#131928] border border-white/10 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl transform transition">
+                    <!-- Icon -->
+                    <div class="flex justify-center mb-6">
+                        <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4v2m0 6v2M7 5h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Title -->
+                    <h3 class="text-lg font-semibold text-white text-center mb-3">Bestand vervangen?</h3>
+
+                    <!-- Message -->
+                    <p class="text-sm text-gray-400 text-center mb-8">
+                        Weet je zeker dat je het huidige bestand wilt vervangen?<br>
+                        <span class="text-xs text-gray-500 mt-2 block">De huidige gegevens zullen permanent worden
+                            verwijderd.</span>
+                    </p>
+
+                    <!-- Buttons -->
+                    <div class="flex gap-3">
+                        <button type="button" id="modal-cancel"
+                            class="flex-1 px-4 py-2.5 bg-gray-700/50 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition border border-gray-600/50">
+                            Annuleren
+                        </button>
+                        <button type="button" id="modal-confirm"
+                            class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition">
+                            Ja, vervangen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <script>
-                document.getElementById('upload-form').addEventListener('submit', function(e) {
+                const uploadForm = document.getElementById('upload-form');
+                const confirmModal = document.getElementById('confirm-modal');
+                const confirmBackdrop = document.getElementById('confirm-modal-backdrop');
+                const modalCancel = document.getElementById('modal-cancel');
+                const modalConfirm = document.getElementById('modal-confirm');
+                const fileInput = document.getElementById('file');
+
+                function showModal() {
+                    confirmModal.classList.remove('hidden');
+                    confirmBackdrop.classList.remove('hidden');
+                }
+
+                function hideModal() {
+                    confirmModal.classList.add('hidden');
+                    confirmBackdrop.classList.add('hidden');
+                }
+
+                uploadForm.addEventListener('submit', function(e) {
                     e.preventDefault();
 
-                    // Check if there are already records uploaded
-                    const fileInput = document.getElementById('file');
                     if (!fileInput.files.length) return;
 
-                    // Check if we need to ask for confirmation
                     const hasExistingData = {{ $paginatedRecords->count() > 0 ? 'true' : 'false' }};
 
                     if (hasExistingData) {
-                        if (confirm(
-                                'Weet je zeker dat je het bestand wilt vervangen?\n\nDe huidige gegevens zullen worden verwijderd en vervangen door de nieuwe gegevens.'
-                                )) {
-                            this.submit();
-                        }
+                        showModal();
                     } else {
-                        this.submit();
+                        uploadForm.submit();
+                    }
+                });
+
+                modalCancel.addEventListener('click', hideModal);
+                confirmBackdrop.addEventListener('click', hideModal);
+
+                modalConfirm.addEventListener('click', () => {
+                    hideModal();
+                    uploadForm.submit();
+                });
+
+                // ESC key to close
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && !confirmModal.classList.contains('hidden')) {
+                        hideModal();
                     }
                 });
             </script>

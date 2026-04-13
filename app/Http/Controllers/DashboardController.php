@@ -154,18 +154,30 @@ class DashboardController extends Controller
     // Drilldown – per medewerker
     // -------------------------------------------------------
 
-    public function byEmployee()
+    public function byEmployee(Request $request)
     {
-        $groups = Record::where('user_id', Auth::id())
+        $search = strtolower($request->get('search', ''));
+
+        $records = Record::where('user_id', Auth::id())
             ->orderBy('worker')
             ->orderByDesc('date')
-            ->get()
-            ->groupBy('worker');
+            ->get();
+
+        // Filter by search term if provided
+        if ($search) {
+            $records = $records->filter(function ($record) use ($search) {
+                return stripos($record->worker, $search) !== false ||
+                    stripos($record->action, $search) !== false;
+            });
+        }
+
+        $groups = $records->groupBy('worker');
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
             'pageTitle' => 'Records per medewerker',
             'pageSubtitle' => 'Alle acties gegroepeerd per medewerker, gesorteerd op datum',
+            'search' => $search,
         ]);
     }
 
@@ -173,18 +185,30 @@ class DashboardController extends Controller
     // Drilldown – per actie
     // -------------------------------------------------------
 
-    public function byAction()
+    public function byAction(Request $request)
     {
-        $groups = Record::where('user_id', Auth::id())
+        $search = strtolower($request->get('search', ''));
+
+        $records = Record::where('user_id', Auth::id())
             ->orderBy('action')
             ->orderByDesc('date')
-            ->get()
-            ->groupBy('action');
+            ->get();
+
+        // Filter by search term if provided
+        if ($search) {
+            $records = $records->filter(function ($record) use ($search) {
+                return stripos($record->action, $search) !== false ||
+                    stripos($record->worker, $search) !== false;
+            });
+        }
+
+        $groups = $records->groupBy('action');
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
             'pageTitle' => 'Records per actie',
             'pageSubtitle' => 'Alle acties gegroepeerd op actietype, gesorteerd op datum',
+            'search' => $search,
         ]);
     }
 
@@ -192,13 +216,23 @@ class DashboardController extends Controller
     // Drilldown – per kosten (hoog → laag)
     // -------------------------------------------------------
 
-    public function byCost()
+    public function byCost(Request $request)
     {
-        // Group by worker so you see who costs the most, rows sorted cost desc
-        $groups = Record::where('user_id', Auth::id())
+        $search = strtolower($request->get('search', ''));
+
+        $records = Record::where('user_id', Auth::id())
             ->orderByDesc('costs')
-            ->get()
-            ->groupBy('worker');
+            ->get();
+
+        // Filter by search term if provided
+        if ($search) {
+            $records = $records->filter(function ($record) use ($search) {
+                return stripos($record->worker, $search) !== false ||
+                    stripos($record->action, $search) !== false;
+            });
+        }
+
+        $groups = $records->groupBy('worker');
 
         // Sort groups by their total costs descending
         $groups = $groups->sortByDesc(fn($recs) => $recs->sum('costs'));
@@ -207,6 +241,7 @@ class DashboardController extends Controller
             'groups' => $groups,
             'pageTitle' => 'Records per kosten',
             'pageSubtitle' => 'Medewerkers gerangschikt op totale kosten (hoogste eerst)',
+            'search' => $search,
         ]);
     }
 
@@ -214,12 +249,23 @@ class DashboardController extends Controller
     // Drilldown – per duur (lang → kort)
     // -------------------------------------------------------
 
-    public function byDuration()
+    public function byDuration(Request $request)
     {
-        $groups = Record::where('user_id', Auth::id())
+        $search = strtolower($request->get('search', ''));
+
+        $records = Record::where('user_id', Auth::id())
             ->orderByDesc('time')
-            ->get()
-            ->groupBy('worker');
+            ->get();
+
+        // Filter by search term if provided
+        if ($search) {
+            $records = $records->filter(function ($record) use ($search) {
+                return stripos($record->worker, $search) !== false ||
+                    stripos($record->action, $search) !== false;
+            });
+        }
+
+        $groups = $records->groupBy('worker');
 
         $groups = $groups->sortByDesc(fn($recs) => $recs->sum('time'));
 
@@ -227,6 +273,7 @@ class DashboardController extends Controller
             'groups' => $groups,
             'pageTitle' => 'Records per duur',
             'pageSubtitle' => 'Medewerkers gerangschikt op totale uren (meeste eerst)',
+            'search' => $search,
         ]);
     }
 }
