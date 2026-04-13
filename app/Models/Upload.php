@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Upload extends Model
 {
+    protected $primaryKey = 'bestand_id';
+
     protected $fillable = [
         'user_id',
         'filename',

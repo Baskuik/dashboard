@@ -66,7 +66,7 @@ class ExcelImportService
 
                     // Record creëren
                     Record::create([
-                        'upload_id' => $upload->id,
+                        'upload_id' => $upload->bestand_id,
                         'date' => $recordData['date'] ?? null,
                         'action' => $recordData['action'] ?? null,
                         'description' => $recordData['description'] ?? null,

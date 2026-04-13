@@ -45,7 +45,7 @@ class UploadController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Upload mislukt: ' . $e->getMessage(), [
-                'upload_id' => $upload->id,
+                'upload_id' => $upload->bestand_id,
                 'trace' => $e->getTraceAsString(),
             ]);
 

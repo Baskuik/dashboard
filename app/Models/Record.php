@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Record extends Model
 {
+    protected $primaryKey = 'record_id';
+
     protected $fillable = [
         'upload_id',
         'user_id',
@@ -19,13 +21,13 @@ class Record extends Model
     ];
 
     protected $casts = [
-        'date'  => 'date',
-        'time'  => 'decimal:2',
+        'date' => 'date',
+        'time' => 'decimal:2',
         'costs' => 'decimal:2',
     ];
 
     public function upload(): BelongsTo
     {
-        return $this->belongsTo(Upload::class);
+        return $this->belongsTo(Upload::class, 'upload_id', 'bestand_id');
     }
 }
