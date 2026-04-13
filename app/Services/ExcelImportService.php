@@ -47,6 +47,14 @@ class ExcelImportService
 
             // Headers detecteren (eerste rij)
             $headers = array_shift($data);
+
+            // TIJDELIJK DEBUG - verwijderen na fix
+            $cleanHeaders = array_map(fn($h) => strtolower(trim((string) $h)), $headers);
+            Log::debug('Excel headers gevonden: ' . json_encode($cleanHeaders));
+            Log::debug('Eerste datarij: ' . json_encode($data[0] ?? []));
+            Log::debug('Volledige headers (origineel): ' . json_encode($headers));
+            // EINDE DEBUG
+
             $columnMap = $this->detectColumns($headers);
 
             if (empty($columnMap)) {
@@ -158,12 +166,18 @@ class ExcelImportService
                     if (stripos($headerLower, $pattern) !== false) {
                         if (!isset($columnMap[$columnType])) {
                             $columnMap[$columnType] = $index;
+                            // DEBUG
+                            Log::debug("Kolom gemapped: '{$headerLower}' → $columnType (index: $index)");
                         }
                         break 2; // Ga naar volgende header
                     }
                 }
             }
         }
+
+        // TIJDELIJK DEBUG
+        Log::debug('Eindresultaat columnMap: ' . json_encode($columnMap));
+        // EINDE DEBUG
 
         // Minstens een kolom moet gevonden worden
         return count($columnMap) > 0 ? $columnMap : [];
