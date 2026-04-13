@@ -28,6 +28,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Upload
+    Route::get('/upload', function () {
+        return redirect()->route('dashboard');
+    });
     Route::post('/upload', [UploadController::class, 'store'])->name('upload.store');
 
     // Drilldown pagina's (klikbare stat-cards)
