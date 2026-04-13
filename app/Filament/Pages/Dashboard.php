@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\ChartDataWidget;
+use App\Filament\Widgets\CostOverviewWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 
@@ -13,6 +14,7 @@ class Dashboard extends BaseDashboard
         return [
             StatsOverviewWidget::class,
             ChartDataWidget::class,
+            CostOverviewWidget::class,
         ];
     }
 
