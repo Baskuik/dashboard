@@ -901,7 +901,7 @@
                 }
             }
 
-            new CurrencyConverter();
+            window.currencyConverter = new CurrencyConverter();
         </script>
 
         {{-- Real-time Dashboard Filtering --}}
@@ -964,33 +964,19 @@
 
             // Helper to get currency info from the converter
             function getCurrencyInfo() {
-                const btn = document.getElementById('currency-btn');
-                const symbol = btn.querySelector('#currency-symbol').textContent;
-                const currencyText = btn.innerText.trim();
-                const currency = currencyText.split('\n')[0];
-
-                const rates = {
-                    'EUR': 1.0,
-                    'USD': 1.10,
-                    'GBP': 0.86,
-                    'JPY': 160.00,
-                    'CHF': 0.94,
-                    'CAD': 1.48,
-                    'AUD': 1.66,
-                    'CNY': 7.90,
-                    'INR': 91.00,
-                    'BRL': 5.40,
-                    'MXN': 18.50,
-                    'SEK': 11.20,
-                    'NOK': 11.60,
-                    'DKK': 7.45,
-                    'SGD': 1.48
-                };
-
+                // Use the global CurrencyConverter instance which has the correct current values
+                if (window.currencyConverter) {
+                    return {
+                        symbol: window.currencyConverter.currentSymbol,
+                        currency: window.currencyConverter.currentCurrency,
+                        rate: window.currencyConverter.currentRate
+                    };
+                }
+                // Fallback if CurrencyConverter not initialized
                 return {
-                    symbol: symbol,
-                    currency: currency.trim(),
-                    rate: rates[currency.trim()] || 1.0
+                    symbol: '€',
+                    currency: 'EUR',
+                    rate: 1.0
                 };
             }
 
@@ -1033,7 +1019,7 @@
                     .then(response => response.json())
                     .then(data => {
                         updateStatCards(data.stats, currencyInfo);
-                        updateCharts(data.charts, currencyInfo);
+                        updateCharts(data.charts, data.kostenPerMaand, currencyInfo);
                         updateCostDisplay(data.kostenPerMaand, currencyInfo);
                         // Re-initialize stat card handlers after updating
                         initStatCardHandlers();
@@ -1078,7 +1064,7 @@
             }
 
             // Update charts with new data
-            function updateCharts(chartsData, currencyInfo) {
+            function updateCharts(chartsData, kostenPerMaandData, currencyInfo) {
                 // Update Actions Per Month chart
                 if (window.actionsPerMonthChart && chartInstances.actionsPerMonth) {
                     chartInstances.actionsPerMonth.data.labels = Object.keys(chartsData.actionsPerMonth);
@@ -1106,10 +1092,9 @@
 
                 // Update Kosten Per Maand chart
                 if (window.kostenPerMaandChart && chartInstances.kostenPerMaand) {
-                    chartInstances.kostenPerMaand.data.labels = Object.keys(chartsData.kostenPerMaand);
-                    chartInstances.kostenPerMaand.data.datasets[0].data = Object.values(chartsData.kostenPerMaand).map(
-                        v =>
-                        Math.round(v * 100) / 100
+                    chartInstances.kostenPerMaand.data.labels = Object.keys(kostenPerMaandData);
+                    chartInstances.kostenPerMaand.data.datasets[0].data = Object.values(kostenPerMaandData).map(
+                        v => Math.round(v * 100) / 100
                     );
                     chartInstances.kostenPerMaand.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
                     chartInstances.kostenPerMaand.update('none');

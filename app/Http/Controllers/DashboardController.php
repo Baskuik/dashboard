@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Record;
 use App\Models\Upload;
+use App\Models\UserDashboardWidget;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\Paginator;
@@ -125,6 +126,14 @@ class DashboardController extends Controller
 
     public function index(Request $request)
     {
+        // Check if user has selected widgets
+        $hasWidgets = UserDashboardWidget::where('user_id', Auth::id())->exists();
+
+        if (!$hasWidgets) {
+            // First time user - redirect to widget selection
+            return redirect()->route('dashboard.select-widgets');
+        }
+
         // Get the most recent upload for this user
         $latestUpload = Upload::where('user_id', Auth::id())
             ->orderByDesc('created_at')

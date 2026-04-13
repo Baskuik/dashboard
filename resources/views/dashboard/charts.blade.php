@@ -100,16 +100,20 @@
 
     // Kosten per maand
     window.kostenPerMaandChart = new Chart(document.getElementById('kostenMaandChart'), {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: Object.keys(kostenPerMaand),
             datasets: [{
                 label: 'Kosten (€)',
                 data: Object.values(kostenPerMaand),
-                backgroundColor: 'rgba(6,182,212,0.7)',
+                backgroundColor: 'rgba(6,182,212,0.15)',
                 borderColor: '#06b6d4',
-                borderWidth: 1,
-                borderRadius: 4
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#06b6d4',
+                pointRadius: 4,
+                pointHoverRadius: 6
             }]
         },
         options: {
