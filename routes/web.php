@@ -39,6 +39,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/records/kosten', [DashboardController::class, 'byCost'])->name('records.by-cost');
     Route::get('/records/duur', [DashboardController::class, 'byDuration'])->name('records.by-duration');
 
+    // API endpoints for AJAX
+    Route::get('/api/dashboard-data', [DashboardController::class, 'getFilteredData'])->name('api.dashboard-data');
+
     // Logout
     Route::post('/logout', function () {
         \Illuminate\Support\Facades\Auth::logout();
