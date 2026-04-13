@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Upload;
+use App\Models\Record;
 use App\Imports\RecordsImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UploadController extends Controller
 {
@@ -16,15 +18,41 @@ class UploadController extends Controller
             'file' => 'required|mimes:xlsx,xls|max:10240',
         ]);
 
+        // Delete all old uploads and their records for this user
+        $userId = Auth::id();
+        $oldUploads = Upload::where('user_id', $userId)->get();
+
+        foreach ($oldUploads as $oldUpload) {
+            // Delete all records associated with this upload
+            Record::where('upload_id', $oldUpload->bestand_id)->delete();
+
+            // Delete the file from storage if it exists
+            $filePath = 'uploads/' . $oldUpload->filename;
+            if (Storage::disk('local')->exists($filePath)) {
+                Storage::disk('local')->delete($filePath);
+            }
+
+            // Delete the upload record
+            $oldUpload->delete();
+        }
+
         $file = $request->file('file');
         $fileName = $file->getClientOriginalName();
 
-        // Sla het bestand op en gebruik het opgeslagen pad
+        // Sla op en bepaal het absolute pad
         $storedPath = $file->storeAs('uploads', $fileName, 'local');
-        $absolutePath = storage_path('app/' . $storedPath);  // ← gebruik dit
+        $absolutePath = storage_path('app/private/' . $storedPath);
 
-        // Maak upload record aan met status 'pending'
-        // (de importer zet dit zelf op 'processing' en daarna 'completed'/'declined')
+        if (!file_exists($absolutePath)) {
+            $absolutePath = storage_path('app/' . $storedPath);
+        }
+
+        Log::info('Upload opgeslagen', [
+            'original_name' => $fileName,
+            'absolute_path' => $absolutePath,
+            'file_exists' => file_exists($absolutePath),
+        ]);
+
         $upload = Upload::create([
             'user_id' => Auth::id(),
             'filename' => $fileName,
@@ -34,9 +62,8 @@ class UploadController extends Controller
 
         try {
             $importer = new RecordsImport($upload, Auth::id());
-            $count = $importer->import($absolutePath); // ← niet meer getRealPath()
+            $count = $importer->import($absolutePath);
 
-            // Upload bijwerken met het aantal verwerkte rijen
             $upload->update([
                 'status' => $count > 0 ? 'completed' : 'declined',
                 'processed_rows' => $count,

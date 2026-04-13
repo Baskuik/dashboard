@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Record;
+use App\Models\Upload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,31 +15,58 @@ class DashboardController extends Controller
 
     /**
      * Returns stats for the authenticated user.
+     * Only includes records from the latest upload.
      * All values default to 0 when no records exist.
      */
     private function getStats(): array
     {
         $userId = Auth::id();
 
-        $records = Record::where('user_id', $userId);
+        // Get only the latest upload
+        $latestUpload = Upload::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$latestUpload) {
+            return [
+                'total_actions' => 0,
+                'total_cost' => 0,
+                'avg_duration' => 0,
+                'total_employees' => 0,
+            ];
+        }
+
+        $records = Record::where('user_id', $userId)
+            ->where('upload_id', $latestUpload->bestand_id);
 
         return [
-            'total_actions'    => (clone $records)->count(),
-            'total_cost'       => (clone $records)->sum('costs') ?? 0,
-            'avg_duration'     => (clone $records)->avg('time') ?? 0,
-            'total_employees'  => (clone $records)->distinct('worker')->count('worker'),
+            'total_actions' => (clone $records)->count(),
+            'total_cost' => (clone $records)->sum('costs') ?? 0,
+            'avg_duration' => (clone $records)->avg('time') ?? 0,
+            'total_employees' => (clone $records)->distinct('worker')->count('worker'),
         ];
     }
 
     /**
      * Returns chart data for the authenticated user.
+     * Only includes records from the latest upload.
      * Arrays are empty when no records exist – Chart.js handles this gracefully.
      */
     private function getChartData(): array
     {
         $userId = Auth::id();
 
-        $actionsPerMonth = Record::where('user_id', $userId)
+        // Get only the latest upload
+        $latestUpload = Upload::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->first();
+
+        $baseQuery = Record::where('user_id', $userId);
+        if ($latestUpload) {
+            $baseQuery->where('upload_id', $latestUpload->bestand_id);
+        }
+
+        $actionsPerMonth = (clone $baseQuery)
             ->whereNotNull('date')
             ->selectRaw("DATE_FORMAT(date, '%Y-%m') as month, COUNT(*) as count")
             ->groupBy('month')
@@ -46,7 +74,7 @@ class DashboardController extends Controller
             ->pluck('count', 'month')
             ->toArray();
 
-        $costPerEmployee = Record::where('user_id', $userId)
+        $costPerEmployee = (clone $baseQuery)
             ->whereNotNull('worker')
             ->selectRaw('worker, SUM(costs) as total')
             ->groupBy('worker')
@@ -54,7 +82,7 @@ class DashboardController extends Controller
             ->pluck('total', 'worker')
             ->toArray();
 
-        $actionsByType = Record::where('user_id', $userId)
+        $actionsByType = (clone $baseQuery)
             ->whereNotNull('action')
             ->selectRaw('action, COUNT(*) as count')
             ->groupBy('action')
@@ -67,7 +95,20 @@ class DashboardController extends Controller
 
     private function getKostenPerMaand(): array
     {
-        return Record::where('user_id', Auth::id())
+        $userId = Auth::id();
+
+        // Get only the latest upload
+        $latestUpload = Upload::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->first();
+
+        $query = Record::where('user_id', $userId);
+
+        if ($latestUpload) {
+            $query->where('upload_id', $latestUpload->bestand_id);
+        }
+
+        return $query
             ->whereNotNull('date')
             ->selectRaw("DATE_FORMAT(date, '%Y-%m') as month, SUM(costs) as total")
             ->groupBy('month')
@@ -82,12 +123,23 @@ class DashboardController extends Controller
 
     public function index()
     {
-        $stats           = $this->getStats();
-        $chartData       = $this->getChartData();
-        $kostenPerMaand  = $this->getKostenPerMaand();
+        // Get the most recent upload for this user
+        $latestUpload = Upload::where('user_id', Auth::id())
+            ->orderByDesc('created_at')
+            ->first();
 
-        $paginatedRecords = Record::where('user_id', Auth::id())
-            ->orderByDesc('date')
+        $stats = $this->getStats();
+        $chartData = $this->getChartData();
+        $kostenPerMaand = $this->getKostenPerMaand();
+
+        // Only show records from the latest upload
+        $query = Record::where('user_id', Auth::id());
+
+        if ($latestUpload) {
+            $query->where('upload_id', $latestUpload->bestand_id);
+        }
+
+        $paginatedRecords = $query->orderByDesc('date')
             ->paginate(25);
 
         return view('dashboard.dashboard', compact(
@@ -111,8 +163,8 @@ class DashboardController extends Controller
             ->groupBy('worker');
 
         return view('dashboard.records-grouped', [
-            'groups'       => $groups,
-            'pageTitle'    => 'Records per medewerker',
+            'groups' => $groups,
+            'pageTitle' => 'Records per medewerker',
             'pageSubtitle' => 'Alle acties gegroepeerd per medewerker, gesorteerd op datum',
         ]);
     }
@@ -130,8 +182,8 @@ class DashboardController extends Controller
             ->groupBy('action');
 
         return view('dashboard.records-grouped', [
-            'groups'       => $groups,
-            'pageTitle'    => 'Records per actie',
+            'groups' => $groups,
+            'pageTitle' => 'Records per actie',
             'pageSubtitle' => 'Alle acties gegroepeerd op actietype, gesorteerd op datum',
         ]);
     }
@@ -149,11 +201,11 @@ class DashboardController extends Controller
             ->groupBy('worker');
 
         // Sort groups by their total costs descending
-        $groups = $groups->sortByDesc(fn ($recs) => $recs->sum('costs'));
+        $groups = $groups->sortByDesc(fn($recs) => $recs->sum('costs'));
 
         return view('dashboard.records-grouped', [
-            'groups'       => $groups,
-            'pageTitle'    => 'Records per kosten',
+            'groups' => $groups,
+            'pageTitle' => 'Records per kosten',
             'pageSubtitle' => 'Medewerkers gerangschikt op totale kosten (hoogste eerst)',
         ]);
     }
@@ -169,11 +221,11 @@ class DashboardController extends Controller
             ->get()
             ->groupBy('worker');
 
-        $groups = $groups->sortByDesc(fn ($recs) => $recs->sum('time'));
+        $groups = $groups->sortByDesc(fn($recs) => $recs->sum('time'));
 
         return view('dashboard.records-grouped', [
-            'groups'       => $groups,
-            'pageTitle'    => 'Records per duur',
+            'groups' => $groups,
+            'pageTitle' => 'Records per duur',
             'pageSubtitle' => 'Medewerkers gerangschikt op totale uren (meeste eerst)',
         ]);
     }

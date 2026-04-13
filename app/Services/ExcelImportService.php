@@ -2,269 +2,187 @@
 
 namespace App\Services;
 
-use App\Models\Upload;
 use App\Models\Record;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Upload;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ExcelImportService
 {
-    /**
-     * Kolom-detectie mapping - wat zoeken we naar in kolom-headers
-     */
-    private array $columnPatterns = [
-        'date' => ['datum', 'date', 'dag', 'day', 'created', 'created_at'],
-        'action' => ['actie', 'action', 'taak', 'task', 'type'],
-        'description' => ['omschrijving', 'description', 'detail', 'opmerking', 'remark'],
-        'worker' => ['medewerker', 'worker', 'werknemer', 'employee', 'naam', 'name'],
-        'time' => ['uren', 'uur', 'hours', 'time', 'duur', 'duration'],
-        'costs' => ['kost', 'kosten', 'cost', 'costs', 'bedrag', 'amount'],
-    ];
-
-    /**
-     * Importeer Excel file en slaan records op
-     */
     public function import(Upload $upload): bool
     {
         try {
-            $upload->update(['status' => 'processing']);
+            $fileName = $upload->filename;
+            $filePath = $this->findUploadFile($fileName);
 
-            // Zoek het uploadbestand
-            $filePath = $this->findUploadFile($upload->filename);
-
-            // Excel-bestand lezen
-            $sheets = Excel::toArray(null, $filePath);
-
-            if (empty($sheets) || empty($sheets[0])) {
-                throw new \Exception('Excel-bestand is leeg');
+            if (!file_exists($filePath)) {
+                Log::error('ExcelImportService: Bestand niet gevonden', ['filePath' => $filePath]);
+                return false;
             }
 
-            $data = $sheets[0]; // Eerste sheet
+            Log::debug('ExcelImportService: Bestand gevonden', ['filePath' => $filePath]);
 
-            if (count($data) < 2) {
-                throw new \Exception('Excel-bestand bevat geen data-rijen');
+            // Read the Excel file
+            $sheets = Excel::toArray([], $filePath);
+            if (empty($sheets)) {
+                Log::error('ExcelImportService: Geen sheets gevonden in Excel');
+                return false;
             }
 
-            // Headers detecteren (eerste rij)
-            $headers = array_shift($data);
-
-            // TIJDELIJK DEBUG - verwijderen na fix
-            $cleanHeaders = array_map(fn($h) => strtolower(trim((string) $h)), $headers);
-            Log::debug('Excel headers gevonden: ' . json_encode($cleanHeaders));
-            Log::debug('Eerste datarij: ' . json_encode($data[0] ?? []));
-            Log::debug('Volledige headers (origineel): ' . json_encode($headers));
-            // EINDE DEBUG
-
-            $columnMap = $this->detectColumns($headers);
-
-            if (empty($columnMap)) {
-                throw new \Exception('Kon geen geldige kolommen detecteren in Excel-bestand');
+            $data = $sheets[0]; // First sheet
+            if (empty($data)) {
+                Log::error('ExcelImportService: Sheet is leeg');
+                return false;
             }
 
-            // Records verwerken
-            $recordsCreated = 0;
+            // First row is headers
+            $headers = array_map('strtolower', array_map('trim', $data[0]));
+            Log::debug('ExcelImportService: Excel headers gevonden', ['headers' => $headers]);
 
-            foreach ($data as $row) {
-                if ($this->isEmptyRow($row)) {
+            // Detect columns
+            $columns = $this->detectColumns($headers);
+            Log::debug('ExcelImportService: Kolommen gemapped', ['columns' => $columns]);
+
+            $count = 0;
+            $userId = $upload->user_id;
+
+            // Process data rows (skip header row)
+            for ($i = 1; $i < count($data); $i++) {
+                $row = $data[$i];
+
+                // Convert to associative array using headers
+                $rowData = [];
+                foreach ($headers as $idx => $header) {
+                    $rowData[$header] = $row[$idx] ?? null;
+                }
+
+                // Skip rows without action or date
+                $action = trim((string) ($rowData[$columns['action']] ?? ''));
+                $date = $rowData[$columns['date']] ?? null;
+
+                if (empty($action) && empty($date)) {
                     continue;
                 }
 
-                try {
-                    $recordData = $this->extractRowData($row, $columnMap);
-
-                    // Record creëren
-                    Record::create([
-                        'upload_id' => $upload->bestand_id,
-                        'date' => $recordData['date'] ?? null,
-                        'action' => $recordData['action'] ?? null,
-                        'description' => $recordData['description'] ?? null,
-                        'worker' => $recordData['worker'] ?? null,
-                        'time' => $recordData['time'] ?? null,
-                        'costs' => $recordData['costs'] ?? null,
-                        'user_id' => $upload->user_id,
-                    ]);
-
-                    $recordsCreated++;
-                } catch (\Exception $e) {
-                    Log::warning("Fout bij record-verwerking:", ['error' => $e->getMessage()]);
-                    // Ga door naar volgende record
+                // Skip total row
+                if (strtolower($action) === 'totaal') {
+                    continue;
                 }
+
+                Record::create([
+                    'upload_id' => $upload->bestand_id,
+                    'user_id' => $userId,
+                    'date' => $this->parseDate($date),
+                    'action' => $action,
+                    'description' => trim((string) ($rowData[$columns['description']] ?? '')),
+                    'worker' => trim((string) ($rowData[$columns['worker']] ?? '')),
+                    'time' => $this->parseNumeric($rowData[$columns['time']] ?? null),
+                    'costs' => $this->parseNumeric($rowData[$columns['costs']] ?? null),
+                ]);
+
+                $count++;
             }
 
-            // Upload bijwerken
             $upload->update([
-                'status' => $recordsCreated > 0 ? 'completed' : 'declined',
-                'processed_rows' => $recordsCreated,
+                'processed_rows' => $count,
+                'status' => 'completed',
             ]);
 
-            return $recordsCreated > 0;
-
+            Log::info('ExcelImportService: Import voltooid', ['count' => $count, 'upload_id' => $upload->bestand_id]);
+            return true;
         } catch (\Exception $e) {
-            Log::error('Excel import error:', ['error' => $e->getMessage()]);
-
-            $upload->update([
-                'status' => 'failed',
-                'processed_rows' => 0,
+            Log::error('ExcelImportService: Fout bij import', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
-
             return false;
         }
     }
 
-    /**
-     * Zoek het uploadbestand
-     */
-    private function findUploadFile(string $filename): string
-    {
-        // Gebruik storage_path() zoals Laravel configureerd (app/private/uploads)
-        $uploadsDir = storage_path('app/private/uploads');
-
-        if (!is_dir($uploadsDir)) {
-            mkdir($uploadsDir, 0755, true);
-        }
-
-        // Probeer exact match
-        $filePath = $uploadsDir . DIRECTORY_SEPARATOR . $filename;
-        if (file_exists($filePath)) {
-            return $filePath;
-        }
-
-        // Probeer met basename
-        $baseName = basename($filename);
-        $filePath = $uploadsDir . DIRECTORY_SEPARATOR . $baseName;
-        if (file_exists($filePath)) {
-            return $filePath;
-        }
-
-        // Probeer de laatste uploadde bestand
-        $files = @glob($uploadsDir . DIRECTORY_SEPARATOR . '*');
-        if (!empty($files)) {
-            usort($files, fn($a, $b) => filemtime($b) - filemtime($a));
-            return $files[0];
-        }
-
-        throw new \Exception('Upload-bestand niet gevonden in ' . $uploadsDir);
-    }
-
-    /**
-     * Detecteer welke kolom welke data bevat
-     */
     private function detectColumns(array $headers): array
     {
-        $columnMap = [];
+        $patterns = [
+            'action' => ['actie', 'action'],
+            'date' => ['datum', 'date'],
+            'description' => ['omschrijving', 'description'],
+            'worker' => ['medewerker', 'worker'],
+            'time' => ['uren', 'time', 'hours'],
+            'costs' => ['kosten (€)', 'kosten', 'costs', 'bedrag'],
+        ];
 
-        foreach ($headers as $index => $header) {
-            if ($header === null || $header === '') {
-                continue;
-            }
+        $columns = [];
 
-            $headerLower = strtolower(trim((string) $header));
-
-            // Voor elke kolom-type, check of deze header eraan voldoet
-            foreach ($this->columnPatterns as $columnType => $patterns) {
-                foreach ($patterns as $pattern) {
-                    if (stripos($headerLower, $pattern) !== false) {
-                        if (!isset($columnMap[$columnType])) {
-                            $columnMap[$columnType] = $index;
-                            // DEBUG
-                            Log::debug("Kolom gemapped: '{$headerLower}' → $columnType (index: $index)");
-                        }
-                        break 2; // Ga naar volgende header
+        foreach ($patterns as $field => $possibleNames) {
+            $columns[$field] = null;
+            foreach ($headers as $idx => $header) {
+                foreach ($possibleNames as $name) {
+                    if (strpos($header, $name) !== false) {
+                        $columns[$field] = $header;
+                        break 2;
                     }
                 }
             }
         }
 
-        // TIJDELIJK DEBUG
-        Log::debug('Eindresultaat columnMap: ' . json_encode($columnMap));
-        // EINDE DEBUG
-
-        // Minstens een kolom moet gevonden worden
-        return count($columnMap) > 0 ? $columnMap : [];
+        return $columns;
     }
 
-    /**
-     * Extract data uit een rij
-     */
-    private function extractRowData(array $row, array $columnMap): array
+    private function findUploadFile(string $fileName): string
     {
-        $data = [];
+        $fileName = basename($fileName);
+        $basePath = storage_path('app' . DIRECTORY_SEPARATOR . 'private' . DIRECTORY_SEPARATOR . 'uploads');
+        return $basePath . DIRECTORY_SEPARATOR . $fileName;
+    }
 
-        foreach ($columnMap as $field => $columnIndex) {
-            $value = $row[$columnIndex] ?? null;
-
-            if ($value === null || $value === '') {
-                continue;
-            }
-
-            // Type-casting per veld
-            switch ($field) {
-                case 'date':
-                    $data[$field] = $this->parseDate($value);
-                    break;
-                case 'time':
-                case 'costs':
-                    $data[$field] = $this->parseNumeric($value);
-                    break;
-                default:
-                    $data[$field] = trim((string) $value);
-            }
+    private function parseDate(mixed $value): ?string
+    {
+        if (empty($value)) {
+            return null;
         }
 
-        return $data;
-    }
-
-    /**
-     * Parse datum-waarden
-     */
-    private function parseDate($value): ?string
-    {
         if (is_numeric($value)) {
-            // Excel datum-nummer
             try {
-                $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
-                return $date->format('Y-m-d');
-            } catch (\Exception $e) {
+                return Date::excelToDateTimeObject((float) $value)->format('Y-m-d');
+            } catch (\Exception) {
                 return null;
             }
         }
 
         try {
-            return \Carbon\Carbon::parse($value)->format('Y-m-d');
-        } catch (\Exception $e) {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Exception) {
             return null;
         }
     }
 
-    /**
-     * Parse numerieke waarden
-     */
-    private function parseNumeric($value): ?float
+    private function parseNumeric(mixed $value): ?float
     {
-        if (is_numeric($value)) {
-            return (float) $value;
+        if ($value === null || $value === '') {
+            return null;
         }
-
-        // Probeer komma te vervangen
-        $value = str_replace(',', '.', trim((string) $value));
 
         if (is_numeric($value)) {
             return (float) $value;
         }
 
-        return null;
-    }
+        $value = trim((string) $value);
 
-    /**
-     * Check of rij leeg is
-     */
-    private function isEmptyRow(array $row): bool
-    {
-        foreach ($row as $cell) {
-            if ($cell !== null && $cell !== '') {
-                return false;
+        if (strpos($value, ',') !== false && strpos($value, '.') !== false) {
+            if (strrpos($value, ',') > strrpos($value, '.')) {
+                $value = str_replace('.', '', $value);
+                $value = str_replace(',', '.', $value);
+            } else {
+                $value = str_replace(',', '', $value);
             }
+        } elseif (strpos($value, ',') !== false) {
+            $value = str_replace(',', '.', $value);
         }
-        return true;
+
+        $numeric = (float) $value;
+        return $numeric > 0 ? $numeric : null;
     }
 }

@@ -103,7 +103,8 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('upload.store') }}" enctype="multipart/form-data" class="space-y-4">
+            <form id="upload-form" method="POST" action="{{ route('upload.store') }}" enctype="multipart/form-data"
+                class="space-y-4">
                 @csrf
                 <div class="flex gap-3 items-center">
                     <label for="file"
@@ -123,6 +124,29 @@
                     </button>
                 </div>
             </form>
+
+            <script>
+                document.getElementById('upload-form').addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    // Check if there are already records uploaded
+                    const fileInput = document.getElementById('file');
+                    if (!fileInput.files.length) return;
+
+                    // Check if we need to ask for confirmation
+                    const hasExistingData = {{ $paginatedRecords->count() > 0 ? 'true' : 'false' }};
+
+                    if (hasExistingData) {
+                        if (confirm(
+                                'Weet je zeker dat je het bestand wilt vervangen?\n\nDe huidige gegevens zullen worden verwijderd en vervangen door de nieuwe gegevens.'
+                                )) {
+                            this.submit();
+                        }
+                    } else {
+                        this.submit();
+                    }
+                });
+            </script>
         </div>
 
         {{-- Stats --}}
