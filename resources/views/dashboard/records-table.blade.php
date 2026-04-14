@@ -1,8 +1,22 @@
 {{-- Recent Records Table --}}
 <div class="border border-white/8 bg-[#131928] rounded-xl p-6">
-    <div class="mb-6">
-        <h2 class="text-base font-semibold text-white">Recente records</h2>
-        <p class="text-xs text-gray-500 mt-1">Jouw milieu-check registraties</p>
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h2 class="text-base font-semibold text-white">Recente records</h2>
+            <p class="text-xs text-gray-500 mt-1">Jouw milieu-check registraties</p>
+        </div>
+        @if ($paginatedRecords->count() > 0)
+            <div class="flex gap-2">
+                <a href="{{ route('export.records') }}{{ request()->getQueryString() ? '?' . request()->getQueryString() : '' }}"
+                    class="px-4 py-2 text-xs font-medium bg-green-600/20 text-green-300 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition">
+                    ↓ Data exporteren
+                </a>
+                <a href="{{ route('export.summary') }}{{ request()->getQueryString() ? '?' . request()->getQueryString() : '' }}"
+                    class="px-4 py-2 text-xs font-medium bg-blue-600/20 text-blue-300 border border-blue-500/30 rounded-lg hover:bg-blue-600/30 transition">
+                    ↓ Samenvatting
+                </a>
+            </div>
+        @endif
     </div>
 
     @if ($paginatedRecords->count() > 0)
