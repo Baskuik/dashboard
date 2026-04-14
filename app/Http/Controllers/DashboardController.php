@@ -126,13 +126,12 @@ class DashboardController extends Controller
 
     public function index(Request $request)
     {
-        // Check if user has selected widgets
-        $hasWidgets = UserDashboardWidget::where('user_id', Auth::id())->exists();
-
-        if (!$hasWidgets) {
-            // First time user - redirect to widget selection
-            return redirect()->route('dashboard.select-widgets');
-        }
+        // Get user's selected widgets with their order
+        $selectedWidgets = Auth::user()
+            ->dashboardWidgets()
+            ->orderBy('order')
+            ->pluck('widget_key')
+            ->toArray();
 
         // Get the most recent upload for this user
         $latestUpload = Upload::where('user_id', Auth::id())
@@ -251,7 +250,8 @@ class DashboardController extends Controller
             'fromDate',
             'toDate',
             'minCost',
-            'maxCost'
+            'maxCost',
+            'selectedWidgets'
         ));
     }
 
@@ -314,8 +314,8 @@ class DashboardController extends Controller
             });
         }
 
-        // Calculate stats with currency conversion
-        $totalCost = ($records->sum('costs') ?? 0) * $currencyRate;
+        // Calculate stats in EUR (no conversion here)
+        $totalCost = ($records->sum('costs') ?? 0);
         $stats = [
             'total_actions' => $records->count(),
             'total_cost' => number_format($totalCost, 2, '.', ''),
@@ -323,7 +323,7 @@ class DashboardController extends Controller
             'total_employees' => $records->pluck('worker')->unique()->count(),
         ];
 
-        // Calculate dynamic chart data
+        // Calculate dynamic chart data in EUR (no conversion here)
         $actionsPerMonth = $records
             ->where('date', '!=', null)
             ->groupBy(function ($record) {
@@ -336,7 +336,7 @@ class DashboardController extends Controller
         $costPerEmployee = $records
             ->where('worker', '!=', null)
             ->groupBy('worker')
-            ->map(fn($recs) => $recs->sum('costs') * $currencyRate)
+            ->map(fn($recs) => $recs->sum('costs'))
             ->sortDesc()
             ->toArray();
 
@@ -352,7 +352,7 @@ class DashboardController extends Controller
             ->groupBy(function ($record) {
                 return \Carbon\Carbon::parse($record->date)->format('Y-m');
             })
-            ->map(fn($recs) => $recs->sum('costs') * $currencyRate)
+            ->map(fn($recs) => $recs->sum('costs'))
             ->toArray();
 
         return response()->json([

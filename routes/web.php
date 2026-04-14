@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     // Dashboard Widgets
     Route::get('/dashboard/widgets', [DashboardWidgetController::class, 'selectWidgets'])->name('dashboard.select-widgets');
     Route::post('/dashboard/widgets', [DashboardWidgetController::class, 'saveWidgets'])->name('dashboard.save-widgets');
+    Route::get('/dashboard/widgets-overview', [DashboardWidgetController::class, 'widgetsOverview'])->name('dashboard.widgets-overview');
 
     // Upload
     Route::get('/upload', function () {

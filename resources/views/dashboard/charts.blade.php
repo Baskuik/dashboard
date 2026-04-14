@@ -1,25 +1,25 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
 
     {{-- Acties per maand --}}
-    <div class="border border-white/8 bg-[#131928] rounded-xl p-5">
+    <div id="actions-chart-container" class="border border-white/8 bg-[#131928] rounded-xl p-5">
         <h3 class="text-sm font-medium text-gray-300 mb-4">Acties per maand</h3>
         <canvas id="actionsChart" height="120"></canvas>
     </div>
 
     {{-- Kosten per maand --}}
-    <div class="border border-white/8 bg-[#131928] rounded-xl p-5">
+    <div id="costs-month-chart-container" class="border border-white/8 bg-[#131928] rounded-xl p-5">
         <h3 class="text-sm font-medium text-gray-300 mb-4">Kosten per maand (€)</h3>
         <canvas id="kostenMaandChart" height="120"></canvas>
     </div>
 
     {{-- Kosten per medewerker --}}
-    <div class="border border-white/8 bg-[#131928] rounded-xl p-5">
+    <div id="costs-employee-chart-container" class="border border-white/8 bg-[#131928] rounded-xl p-5">
         <h3 class="text-sm font-medium text-gray-300 mb-4">Kosten per medewerker (€)</h3>
         <canvas id="costChart" height="120"></canvas>
     </div>
 
     {{-- Actietypes verdeling --}}
-    <div class="border border-white/8 bg-[#131928] rounded-xl p-5">
+    <div id="actions-type-chart-container" class="border border-white/8 bg-[#131928] rounded-xl p-5">
         <h3 class="text-sm font-medium text-gray-300 mb-4">Verdeling actietypes</h3>
         <canvas id="actionsTypeChart" height="120"></canvas>
     </div>
@@ -30,6 +30,7 @@
 <script>
     const chartData = @json($chartData ?? ['actionsPerMonth' => [], 'costPerEmployee' => [], 'actionsByType' => []]);
     const kostenPerMaand = @json($kostenPerMaand ?? []);
+    const selectedWidgets = @json($selectedWidgets ?? []);
 
     const tickColor = '#6b7280';
     const gridColor = 'rgba(255,255,255,0.04)';
@@ -185,4 +186,27 @@
     if (typeof window.storeChartInstance !== 'undefined') {
         window.storeChartInstance('actionsByType', window.actionsByTypeChart);
     }
+
+    // Hide chart containers that aren't selected
+    window.hideUnselectedCharts = function() {
+        if (!selectedWidgets.includes('actions_per_month')) {
+            const container = document.getElementById('actions-chart-container');
+            if (container) container.style.display = 'none';
+        }
+        if (!selectedWidgets.includes('costs_per_month')) {
+            const container = document.getElementById('costs-month-chart-container');
+            if (container) container.style.display = 'none';
+        }
+        if (!selectedWidgets.includes('costs_per_employee')) {
+            const container = document.getElementById('costs-employee-chart-container');
+            if (container) container.style.display = 'none';
+        }
+        if (!selectedWidgets.includes('actions_by_type')) {
+            const container = document.getElementById('actions-type-chart-container');
+            if (container) container.style.display = 'none';
+        }
+    };
+
+    // Call immediately to hide unselected charts
+    window.hideUnselectedCharts();
 </script>

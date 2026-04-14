@@ -51,16 +51,31 @@
                     <span class="text-white/20 text-sm">/</span>
                     <span class="text-gray-400 text-sm">Dashboard</span>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 relative">
                     @auth
-                        <span class="text-sm text-gray-400 mono">{{ Auth::user()->name }}</span>
-                        <form method="POST" action="{{ route('logout') }}" class="inline">
-                            @csrf
-                            <button type="submit"
-                                class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white border border-white/10 hover:border-white/20 rounded-md transition">
-                                Uitloggen
-                            </button>
-                        </form>
+                        <button type="button" id="user-menu-btn"
+                            class="flex items-center gap-2 px-3 py-1.5 text-white text-sm font-semibold hover:bg-white/10 rounded-md transition">
+                            <span class="mono">{{ Auth::user()->name }}</span>
+                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                        </button>
+
+                        <div id="user-menu-dropdown"
+                            class="hidden absolute top-full right-0 mt-2 bg-[#131928] border border-white/10 rounded-lg shadow-2xl z-50 w-48 py-1">
+                            <a href="{{ route('dashboard.select-widgets') }}"
+                                class="block px-4 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-white/5 transition">
+                                Widgets beheren
+                            </a>
+                            <form method="POST" action="{{ route('logout') }}" class="m-0">
+                                @csrf
+                                <button type="submit"
+                                    class="block w-full text-left px-4 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-white/5 transition">
+                                    Uitloggen
+                                </button>
+                            </form>
+                        </div>
                     @else
                         <a href="{{ route('login') }}"
                             class="px-3 py-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded-md transition">
@@ -217,7 +232,7 @@
             </script>
         </div>
 
-        {{-- Filters Section --}}
+        {{-- Show filters and stats always (whether widgets are selected or not) --}}
         <div class="border border-white/8 bg-[#131928] rounded-xl p-6 mb-8">
             <h2 class="text-base font-semibold text-white mb-4">Filter &amp; Zoeking</h2>
             <form method="GET" class="space-y-4" id="dashboard-filter-form">
@@ -579,6 +594,35 @@
                 </div>
             </form>
         </div>
+        @include('dashboard.stats', ['stats' => $stats])
+
+        {{-- Charts --}}
+        @include('dashboard.charts', [
+            'chartData' => $chartData,
+            'kostenPerMaand' => $kostenPerMaand,
+            'selectedWidgets' => $selectedWidgets,
+        ])
+
+        {{-- No Widgets Selected State --}}
+        @if (empty($selectedWidgets))
+            <div
+                class="border border-white/8 bg-[#131928] rounded-xl p-16 mb-8 flex flex-col items-center justify-center text-center">
+                <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
+                    <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-semibold text-white mb-2">Geen widgets geselecteerd</h2>
+                <p class="text-gray-400 mb-8 max-w-md">Je hebt nog geen widgets geselecteerd voor je dashboard. Kies
+                    widgets om je belangrijkste metriek en grafieken weer te geven.</p>
+                <a href="{{ route('dashboard.select-widgets') }}"
+                    class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition font-medium">
+                    Widgets Beheren
+                </a>
+            </div>
+        @endif
+
 
         {{-- Filter Scripts (Calendar & Currency) --}}
         <style>
@@ -782,17 +826,26 @@
             const minInput = document.getElementById('min_cost_input');
             const maxInput = document.getElementById('max_cost_input');
             const costDisplay = document.getElementById('cost-range-display');
+            const userMenuBtn = document.getElementById('user-menu-btn');
+            const userMenuDropdown = document.getElementById('user-menu-dropdown');
+
+            // Initialize stat card handlers (click handlers for stat cards)
+            function initStatCardHandlers() {
+                // This function initializes any event handlers on stat cards
+                // Currently a placeholder but can be expanded for stat card interactions
+            }
 
             function updateCostDisplay() {
                 const min = minInput.value;
                 const max = maxInput.value;
+                const symbol = window.currencyConverter ? window.currencyConverter.currentSymbol : '€';
                 let display = '';
                 if (min && max) {
-                    display = `€${parseFloat(min).toFixed(2)} – €${parseFloat(max).toFixed(2)}`;
+                    display = `${symbol}${parseFloat(min).toFixed(2)} – ${symbol}${parseFloat(max).toFixed(2)}`;
                 } else if (min) {
-                    display = `Vanaf €${parseFloat(min).toFixed(2)}`;
+                    display = `Vanaf ${symbol}${parseFloat(min).toFixed(2)}`;
                 } else if (max) {
-                    display = `Tot €${parseFloat(max).toFixed(2)}`;
+                    display = `Tot ${symbol}${parseFloat(max).toFixed(2)}`;
                 }
                 costDisplay.textContent = display;
             }
@@ -863,6 +916,8 @@
                 }
 
                 updateUI() {
+                    console.log('CurrencyConverter.updateUI() called, currency:', this.currentCurrency, 'rate:', this
+                        .currentRate);
                     document.getElementById('currency-symbol').textContent = this.currentSymbol;
                     document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
                     document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
@@ -896,6 +951,7 @@
 
                     // Trigger dashboard data update when currency changes
                     if (typeof updateDashboardData !== 'undefined') {
+                        console.log('Calling updateDashboardData from currency change');
                         updateDashboardData();
                     }
                 }
@@ -913,6 +969,12 @@
                 kostenPerMaand: null
             };
 
+            // Store original chart data in EUR for currency conversion
+            let originalChartData = {
+                costPerEmployee: {},
+                kostenPerMaand: {}
+            };
+
             let currentFilters = {
                 search: '{{ $search ?? '' }}',
                 from_date: '{{ $fromDate ?? '' }}',
@@ -921,6 +983,11 @@
                 max_cost: '{{ $maxCost ?? '' }}',
                 currency: 'EUR',
                 currency_rate: 1.0
+            };
+
+            // Store chart instances when they're created
+            window.storeChartInstance = function(name, instance) {
+                chartInstances[name] = instance;
             };
 
             // Initialize dashboard on page load
@@ -983,14 +1050,22 @@
             // Update currentFilters from form inputs - this keeps it in sync with what user types
             function syncCurrentFilters() {
                 const form = document.getElementById('dashboard-filter-form');
+                if (!form) return;
+
                 const currencyInfo = getCurrencyInfo();
 
+                const searchInput = form.querySelector('input[name="search"]');
+                const fromDateInput = document.getElementById('from_date_hidden');
+                const toDateInput = document.getElementById('to_date_hidden');
+                const minCostInput = document.getElementById('min_cost_input');
+                const maxCostInput = document.getElementById('max_cost_input');
+
                 currentFilters = {
-                    search: form.querySelector('input[name="search"]').value,
-                    from_date: document.getElementById('from_date_hidden').value,
-                    to_date: document.getElementById('to_date_hidden').value,
-                    min_cost: document.getElementById('min_cost_input').value,
-                    max_cost: document.getElementById('max_cost_input').value,
+                    search: searchInput ? searchInput.value : '',
+                    from_date: fromDateInput ? fromDateInput.value : '',
+                    to_date: toDateInput ? toDateInput.value : '',
+                    min_cost: minCostInput ? minCostInput.value : '',
+                    max_cost: maxCostInput ? maxCostInput.value : '',
                     currency: currencyInfo.currency,
                     currency_rate: currencyInfo.rate
                 };
@@ -998,18 +1073,19 @@
 
             // Main function to fetch and update dashboard data
             function updateDashboardData() {
-                const form = document.getElementById('dashboard-filter-form');
-                const formData = new FormData(form);
-
                 const currencyInfo = getCurrencyInfo();
-                formData.append('currency', currencyInfo.currency);
-                formData.append('currency_rate', currencyInfo.rate);
 
-                // Update current filters
+                // First sync the current filters (including currency)
                 syncCurrentFilters();
 
+                // Build query parameters from currentFilters
+                const queryParams = new URLSearchParams();
+                for (const [key, value] of Object.entries(currentFilters)) {
+                    queryParams.append(key, value);
+                }
+
                 // Fetch data from API
-                fetch('{{ route('api.dashboard-data') }}?' + new URLSearchParams(Object.entries(currentFilters)), {
+                fetch('{{ route('api.dashboard-data') }}?' + queryParams.toString(), {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
@@ -1020,7 +1096,7 @@
                     .then(data => {
                         updateStatCards(data.stats, currencyInfo);
                         updateCharts(data.charts, data.kostenPerMaand, currencyInfo);
-                        updateCostDisplay(data.kostenPerMaand, currencyInfo);
+                        updateCostDisplay();
                         // Re-initialize stat card handlers after updating
                         initStatCardHandlers();
                     })
@@ -1029,24 +1105,18 @@
 
             // Update stat cards with new values
             function updateStatCards(stats, currencyInfo) {
-                const symbols = {
-                    'total_actions': 'actions',
-                    'total_cost': 'currency',
-                    'avg_duration': 'duration',
-                    'total_employees': 'employees'
-                };
-
                 // Update Totaal acties
                 const totalActionsCard = document.querySelector('[href="{{ route('records.by-action') }}"]');
                 if (totalActionsCard) {
                     totalActionsCard.querySelector('.mono').textContent = stats.total_actions;
                 }
 
-                // Update Totale kosten
+                // Update Totale kosten - convert EUR to current currency
                 const costCard = document.querySelector('[href="{{ route('records.by-cost') }}"]');
                 if (costCard) {
+                    const convertedCost = parseFloat(stats.total_cost) * currencyInfo.rate;
                     costCard.querySelector('.mono').textContent =
-                        `${currencyInfo.symbol} ${parseFloat(stats.total_cost).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+                        `${currencyInfo.symbol} ${convertedCost.toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
                 }
 
                 // Update Gem. duur
@@ -1067,37 +1137,38 @@
             function updateCharts(chartsData, kostenPerMaandData, currencyInfo) {
                 // Update Actions Per Month chart
                 if (window.actionsPerMonthChart && chartInstances.actionsPerMonth) {
-                    chartInstances.actionsPerMonth.data.labels = Object.keys(chartsData.actionsPerMonth);
-                    chartInstances.actionsPerMonth.data.datasets[0].data = Object.values(chartsData.actionsPerMonth);
-                    chartInstances.actionsPerMonth.update('none');
+                    chartInstances.actionsPerMonth.data.labels = Object.keys(chartsData.actionsPerMonth || {});
+                    chartInstances.actionsPerMonth.data.datasets[0].data = Object.values(chartsData.actionsPerMonth || {});
+                    chartInstances.actionsPerMonth.update();
                 }
 
-                // Update Cost Per Employee chart
+                // Update Cost Per Employee chart - convert EUR to current currency
                 if (window.costPerEmployeeChart && chartInstances.costPerEmployee) {
-                    chartInstances.costPerEmployee.data.labels = Object.keys(chartsData.costPerEmployee);
-                    chartInstances.costPerEmployee.data.datasets[0].data = Object.values(chartsData.costPerEmployee)
-                        .map(v =>
-                            Math.round(v * 100) / 100
-                        );
+                    const convertedData = Object.values(chartsData.costPerEmployee || {})
+                        .map(v => Math.round(v * currencyInfo.rate * 100) / 100);
+                    chartInstances.costPerEmployee.data.labels = Object.keys(chartsData.costPerEmployee || {});
+                    chartInstances.costPerEmployee.data.datasets[0].data = convertedData;
                     chartInstances.costPerEmployee.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
-                    chartInstances.costPerEmployee.update('none');
+                    chartInstances.costPerEmployee.update();
                 }
 
                 // Update Actions By Type chart
                 if (window.actionsByTypeChart && chartInstances.actionsByType) {
-                    chartInstances.actionsByType.data.labels = Object.keys(chartsData.actionsByType);
-                    chartInstances.actionsByType.data.datasets[0].data = Object.values(chartsData.actionsByType);
-                    chartInstances.actionsByType.update('none');
+                    chartInstances.actionsByType.data.labels = Object.keys(chartsData.actionsByType || {});
+                    chartInstances.actionsByType.data.datasets[0].data = Object.values(chartsData.actionsByType || {});
+                    chartInstances.actionsByType.update();
                 }
 
-                // Update Kosten Per Maand chart
+                // Update Kosten Per Maand chart - convert EUR to current currency
                 if (window.kostenPerMaandChart && chartInstances.kostenPerMaand) {
-                    chartInstances.kostenPerMaand.data.labels = Object.keys(kostenPerMaandData);
-                    chartInstances.kostenPerMaand.data.datasets[0].data = Object.values(kostenPerMaandData).map(
-                        v => Math.round(v * 100) / 100
-                    );
+                    console.log('Updating kostenPerMaand chart with data:', kostenPerMaandData);
+                    const convertedData = Object.values(kostenPerMaandData || {})
+                        .map(v => Math.round(v * currencyInfo.rate * 100) / 100);
+                    chartInstances.kostenPerMaand.data.labels = Object.keys(kostenPerMaandData || {});
+                    chartInstances.kostenPerMaand.data.datasets[0].data = convertedData;
                     chartInstances.kostenPerMaand.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
-                    chartInstances.kostenPerMaand.update('none');
+                    chartInstances.kostenPerMaand.update();
+                    console.log('✓ kostenPerMaand chart updated');
                 }
 
                 // Update chart container titles
@@ -1108,55 +1179,16 @@
                         title.textContent = `Kosten per medewerker (${currencyInfo.symbol})`;
                     }
                 });
+
             }
 
-            // Store chart instances when they're created
-            window.storeChartInstance = function(name, instance) {
-                chartInstances[name] = instance;
-            };
-
-            // Initialize stat card click handlers - call this once on page load
-            function initStatCardHandlers() {
-                document.querySelectorAll('.stat-card').forEach(card => {
-                    card.style.cursor = 'pointer';
-                    card.removeEventListener('click', handleStatCardClick); // Remove old listener if exists
-                    card.addEventListener('click', handleStatCardClick);
-                });
-            }
-
-            // Handle stat card clicks with current filters
-            function handleStatCardClick(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const href = this.getAttribute('href');
-                if (href) {
-                    // Make sure filters are synced
-                    syncCurrentFilters();
-
-                    // Build query string with only non-empty filters
-                    const params = new URLSearchParams();
-                    if (currentFilters.search) params.append('search', currentFilters.search);
-                    if (currentFilters.from_date) params.append('from_date', currentFilters.from_date);
-                    if (currentFilters.to_date) params.append('to_date', currentFilters.to_date);
-                    if (currentFilters.min_cost) params.append('min_cost', currentFilters.min_cost);
-                    if (currentFilters.max_cost) params.append('max_cost', currentFilters.max_cost);
-
-                    const queryString = params.toString();
-                    window.location.href = href + (queryString ? '?' + queryString : '');
+            // User menu click handler
+            document.addEventListener('click', function(e) {
+                if (!userMenuBtn.contains(e.target) && !userMenuDropdown.contains(e.target)) {
+                    userMenuDropdown.classList.add('hidden');
                 }
-            }
-
-            // Initialize on page load
-            document.addEventListener('DOMContentLoaded', function() {
-                initStatCardHandlers();
             });
         </script>
-
-        @include('dashboard.stats', ['stats' => $stats])
-
-        {{-- Charts --}}
-        @include('dashboard.charts', ['chartData' => $chartData, 'kostenPerMaand' => $kostenPerMaand])
 
     </main>
 </body>

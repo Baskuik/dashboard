@@ -33,7 +33,7 @@ class DashboardWidgetController extends Controller
     public function saveWidgets(Request $request)
     {
         $request->validate([
-            'widgets' => 'required|array|min:1',
+            'widgets' => 'nullable|array',
             'widgets.*' => 'string|in:actions_per_month,costs_per_month,costs_per_employee,actions_by_type',
         ]);
 
@@ -43,7 +43,7 @@ class DashboardWidgetController extends Controller
         // Delete existing widgets for this user
         UserDashboardWidget::where('user_id', $userId)->delete();
 
-        // Insert new widgets with order
+        // Insert new widgets with order (only if any are selected)
         foreach ($widgets as $index => $widgetKey) {
             UserDashboardWidget::create([
                 'user_id' => $userId,
@@ -65,5 +65,24 @@ class DashboardWidgetController extends Controller
             ->count();
 
         return response()->json(['has_widgets' => $count > 0]);
+    }
+
+    /**
+     * Show widgets overview page
+     */
+    public function widgetsOverview()
+    {
+        $availableWidgets = UserDashboardWidget::getAvailableWidgets();
+
+        // Get user's currently selected widgets
+        $activeWidgets = Auth::user()
+            ->dashboardWidgets()
+            ->pluck('widget_key')
+            ->toArray();
+
+        return view('dashboard.widgets-overview', [
+            'widgets' => $availableWidgets,
+            'activeWidgets' => $activeWidgets,
+        ]);
     }
 }
