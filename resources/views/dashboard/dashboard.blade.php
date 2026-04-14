@@ -580,7 +580,7 @@
                                 <div class="text-xs text-gray-500 mb-2">Max</div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs text-gray-400" id="max-currency-symbol">€</span>
-                                    <input type="number" name="max_cost" placeholder="9999" step="0.01"
+                                    <input type="number" name="max_cost" placeholder="0" step="0.01"
                                         id="max_cost_input" value="{{ $maxCost ?? '' }}"
                                         class="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder-gray-600">
                                 </div>

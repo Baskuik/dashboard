@@ -760,8 +760,8 @@
                         document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
                         document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
 
-                        // Update all currency symbols in tables
-                        document.querySelectorAll('#currency-symbol-table').forEach(el => {
+                        // Update all currency symbols in tables and group headers
+                        document.querySelectorAll('.currency-symbol-table, .group-symbol').forEach(el => {
                             el.textContent = this.currentSymbol;
                         });
 
@@ -805,23 +805,32 @@
                         document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
                         document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
 
-                        // Update all currency symbols in tables
-                        document.querySelectorAll('#currency-symbol-table').forEach(el => {
+                        // Update all currency symbols in tables and group headers
+                        document.querySelectorAll('.currency-symbol-table, .group-symbol').forEach(el => {
                             el.textContent = this.currentSymbol;
                         });
 
                         // Convert and update input values
-                        if (this.originalMinValue !== null) {
-                            minInput.value = (this.originalMinValue * this.currentRate).toFixed(2);
-                        }
-                        if (this.originalMaxValue !== null) {
-                            maxInput.value = (this.originalMaxValue * this.currentRate).toFixed(2);
+                        try {
+                            if (this.originalMinValue !== null) {
+                                minInput.value = (this.originalMinValue * this.currentRate).toFixed(2);
+                            }
+                            if (this.originalMaxValue !== null) {
+                                minInput.value = (this.originalMaxValue * this.currentRate).toFixed(2);
+                            }
+                        } catch (e) {
+                            console.error('❌ Error updating input values:', e);
                         }
 
                         // Update cost range display
-                        updateCostDisplay();
+                        try {
+                            updateCostDisplay();
+                        } catch (e) {
+                            console.error('❌ Error in updateCostDisplay():', e);
+                        }
 
                         // Update all cost displays in grouped records
+                        console.log('About to update [data-cost-original] elements...');
                         const costElements = document.querySelectorAll('[data-cost-original]');
                         console.log('Found', costElements.length, 'elements with [data-cost-original]');
                         costElements.forEach((el, index) => {
@@ -908,7 +917,7 @@
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-sm font-semibold text-cyan-400 mono"><span id="group-symbol">€</span><span
+                        <p class="text-sm font-semibold text-cyan-400 mono"><span class="group-symbol">€</span><span
                                 data-cost-original="{{ $records->sum('costs') }}">{{ number_format($records->sum('costs'), 2, ',', '.') }}</span>
                         </p>
                         <p class="text-xs text-gray-500">{{ number_format($records->sum('time'), 1, ',', '.') }}u
@@ -965,7 +974,7 @@
                                     </td>
                                     <td
                                         class="py-2.5 text-right font-medium text-cyan-400 mono text-xs whitespace-nowrap">
-                                        <span id="currency-symbol-table">€</span><span
+                                        <span class="currency-symbol-table">€</span><span
                                             data-cost-original="{{ $record->costs }}">{{ number_format($record->costs, 2, ',', '.') }}</span>
                                     </td>
                                 </tr>
