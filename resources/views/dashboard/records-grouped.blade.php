@@ -26,38 +26,13 @@
 <body class="bg-[#0b0f1a] text-gray-100 min-h-screen">
 
     {{-- Nav --}}
-    <nav class="border-b border-white/5 bg-[#0f1421]/80 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-6 lg:px-8">
-            <div class="flex justify-between items-center h-14">
-                <div class="flex items-center gap-3">
-                    <div class="w-7 h-7 bg-blue-500 rounded flex items-center justify-center">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                    </div>
-                    <span class="font-semibold text-white">EcoCheck</span>
-                    <span class="text-white/20 text-sm">/</span>
-                    <a href="{{ route('dashboard') }}?{{ http_build_query(request()->query()) }}"
-                        class="text-gray-400 text-sm hover:text-gray-200 transition">Dashboard</a>
-                    <span class="text-white/20 text-sm">/</span>
-                    <span class="text-gray-400 text-sm">{{ $pageTitle }}</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    @auth
-                        <span class="text-sm text-gray-400 mono">{{ Auth::user()->name }}</span>
-                        <form method="POST" action="{{ route('logout') }}" class="inline">
-                            @csrf
-                            <button type="submit"
-                                class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white border border-white/10 hover:border-white/20 rounded-md transition">
-                                Uitloggen
-                            </button>
-                        </form>
-                    @endauth
-                </div>
-            </div>
-        </div>
-    </nav>
+    <x-navbar>
+        <span class="text-white/20 text-sm">/</span>
+        <a href="{{ route('dashboard') }}?{{ http_build_query(request()->query()) }}"
+            class="text-gray-400 text-sm hover:text-gray-200 transition">Dashboard</a>
+        <span class="text-white/20 text-sm">/</span>
+        <span class="text-gray-400 text-sm">{{ $pageTitle }}</span>
+    </x-navbar>
 
     <main class="max-w-7xl mx-auto px-6 lg:px-8 py-10">
 

@@ -38,6 +38,7 @@ class RecordsImport
         Log::info('RecordsImport headers', ['headers' => $headers]);
 
         $count = 0;
+        $skipped = 0;
 
         for ($i = 1; $i < count($rows); $i++) {
             $row = $rows[$i];
@@ -62,7 +63,8 @@ class RecordsImport
                 continue;
             }
 
-            Record::create([
+            // Voorbereiding van record data
+            $recordData = [
                 'upload_id' => $this->upload->bestand_id,
                 'user_id' => $this->userId,
                 'date' => $this->parseDate($date),
@@ -88,12 +90,35 @@ class RecordsImport
                     ?? $rowData['costs']
                     ?? null
                 ),
-            ]);
+            ];
 
-            $count++;
+            // Valideer record data
+            try {
+                $validated = Record::validateRecord($recordData);
+                Record::create($validated);
+                $count++;
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                $skipped++;
+                Log::warning('RecordsImport: rij skipped vanwege validatie fouten', [
+                    'row_number' => $i + 1,
+                    'errors' => $e->errors(),
+                    'data' => $recordData,
+                ]);
+            } catch (\Exception $e) {
+                $skipped++;
+                Log::error('RecordsImport: rij skipped vanwege error', [
+                    'row_number' => $i + 1,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
-        Log::info('RecordsImport klaar', ['count' => $count]);
+        Log::info('RecordsImport klaar', [
+            'count' => $count,
+            'skipped' => $skipped,
+            'total_processed' => $count + $skipped,
+        ]);
+
         return $count;
     }
 

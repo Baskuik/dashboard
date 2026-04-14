@@ -48,6 +48,10 @@ Route::middleware('auth')->group(function () {
     // API endpoints for AJAX
     Route::get('/api/dashboard-data', [DashboardController::class, 'getFilteredData'])->name('api.dashboard-data');
 
+    // Export endpoints
+    Route::get('/export/records', [\App\Http\Controllers\ExportController::class, 'exportRecords'])->name('export.records');
+    Route::get('/export/summary', [\App\Http\Controllers\ExportController::class, 'exportSummary'])->name('export.summary');
+
     // Logout
     Route::post('/logout', function () {
         \Illuminate\Support\Facades\Auth::logout();
