@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardWidgetController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,11 @@ Route::middleware('auth')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Dashboard Widgets
+    Route::get('/dashboard/widgets', [DashboardWidgetController::class, 'selectWidgets'])->name('dashboard.select-widgets');
+    Route::post('/dashboard/widgets', [DashboardWidgetController::class, 'saveWidgets'])->name('dashboard.save-widgets');
+    Route::get('/dashboard/widgets-overview', [DashboardWidgetController::class, 'widgetsOverview'])->name('dashboard.widgets-overview');
+
     // Upload
     Route::get('/upload', function () {
         return redirect()->route('dashboard');
@@ -38,6 +44,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/records/actie', [DashboardController::class, 'byAction'])->name('records.by-action');
     Route::get('/records/kosten', [DashboardController::class, 'byCost'])->name('records.by-cost');
     Route::get('/records/duur', [DashboardController::class, 'byDuration'])->name('records.by-duration');
+
+    // API endpoints for AJAX
+    Route::get('/api/dashboard-data', [DashboardController::class, 'getFilteredData'])->name('api.dashboard-data');
 
     // Logout
     Route::post('/logout', function () {

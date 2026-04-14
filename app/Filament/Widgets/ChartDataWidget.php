@@ -18,19 +18,28 @@ class ChartDataWidget extends Widget
         $actionsPerMonth = $records->groupBy(function ($record) {
             $date = $record->date ?? now()->format('Y-m-d');
             return \Carbon\Carbon::parse($date)->format('Y-m');
-        })->map->count();
+        })->map->count()->toArray();
+
+        // Cost per month
+        $costPerMonth = $records->groupBy(function ($record) {
+            $date = $record->date ?? now()->format('Y-m-d');
+            return \Carbon\Carbon::parse($date)->format('Y-m');
+        })->map(function ($monthRecords) {
+            return $monthRecords->sum('costs');
+        })->toArray();
 
         // Cost per employee (worker)
         $costPerWorker = $records->groupBy('worker')
             ->map(function ($workerRecords) {
                 return $workerRecords->sum('costs');
-            });
+            })->toArray();
 
         // Actions by type
-        $actionsByType = $records->groupBy('action')->map->count();
+        $actionsByType = $records->groupBy('action')->map->count()->toArray();
 
         return [
             'actionsPerMonth' => $actionsPerMonth,
+            'costPerMonth' => $costPerMonth,
             'costPerEmployee' => $costPerWorker,
             'actionsByType' => $actionsByType,
         ];
