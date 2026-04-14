@@ -32,6 +32,14 @@
     const kostenPerMaand = @json($kostenPerMaand ?? []);
     const selectedWidgets = @json($selectedWidgets ?? []);
 
+    // Store ORIGINAL EUR data - CRITICAL: Never modify these, always convert FROM these
+    window.originalChartData = JSON.parse(JSON.stringify(chartData));
+    window.originalKostenPerMaandData = JSON.parse(JSON.stringify(kostenPerMaand));
+    console.log('✓ Original EUR data stored:', {
+        originalChartData: window.originalChartData,
+        originalKostenPerMaandData: window.originalKostenPerMaandData
+    });
+
     const tickColor = '#6b7280';
     const gridColor = 'rgba(255,255,255,0.04)';
 

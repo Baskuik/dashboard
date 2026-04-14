@@ -699,12 +699,26 @@
                 // Currency Converter
                 class CurrencyConverter {
                     constructor() {
-                        this.currentCurrency = 'EUR';
-                        this.currentRate = 1.0;
-                        this.currentSymbol = '€';
+                        // Load saved currency from localStorage, default to EUR
+                        const savedCurrency = localStorage.getItem('selectedCurrency');
+
+                        if (savedCurrency) {
+                            const [currency, rate, symbol] = savedCurrency.split('|');
+                            this.currentCurrency = currency;
+                            this.currentRate = parseFloat(rate);
+                            this.currentSymbol = symbol;
+                            console.log('✓ Loaded saved currency from localStorage:', this.currentCurrency);
+                        } else {
+                            this.currentCurrency = 'EUR';
+                            this.currentRate = 1.0;
+                            this.currentSymbol = '€';
+                            console.log('✓ No saved currency, using default EUR');
+                        }
+
                         this.originalMinValue = minInput.value ? parseFloat(minInput.value) : null;
                         this.originalMaxValue = maxInput.value ? parseFloat(maxInput.value) : null;
                         this.init();
+                        // NOTE: restoreUIState() is called from DOMContentLoaded to ensure all elements are loaded
                     }
 
                     init() {
@@ -724,6 +738,10 @@
                                 this.currentCurrency = btn.dataset.currency;
                                 this.currentRate = parseFloat(btn.dataset.rate);
                                 this.currentSymbol = btn.dataset.symbol;
+                                // Save to localStorage
+                                localStorage.setItem('selectedCurrency',
+                                    `${this.currentCurrency}|${this.currentRate}|${this.currentSymbol}`);
+                                console.log('✓ Saved to localStorage:', this.currentCurrency);
                                 this.updateUI();
                                 currencyPicker.classList.add('hidden');
                             });
@@ -736,7 +754,52 @@
                         });
                     }
 
+                    restoreUIState() {
+                        // Update UI to reflect loaded/saved currency without triggering data updates
+                        document.getElementById('currency-symbol').textContent = this.currentSymbol;
+                        document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
+                        document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
+
+                        // Update all currency symbols in tables
+                        document.querySelectorAll('#currency-symbol-table').forEach(el => {
+                            el.textContent = this.currentSymbol;
+                        });
+
+                        // Convert and update input values
+                        if (this.originalMinValue !== null) {
+                            minInput.value = (this.originalMinValue * this.currentRate).toFixed(2);
+                        }
+                        if (this.originalMaxValue !== null) {
+                            maxInput.value = (this.originalMaxValue * this.currentRate).toFixed(2);
+                        }
+
+                        // Update all cost displays in grouped records
+                        document.querySelectorAll('[data-cost-original]').forEach(el => {
+                            const originalCost = parseFloat(el.dataset.costOriginal);
+                            const convertedCost = (originalCost * this.currentRate).toFixed(2);
+                            el.textContent = convertedCost.replace('.', ',');
+                        });
+
+                        // Update cost range display text
+                        const costDisplayEl = document.getElementById('cost-range-display');
+                        const min = minInput.value;
+                        const max = maxInput.value;
+                        let display = '';
+
+                        if (min && max) {
+                            display =
+                                `${this.currentSymbol}${parseFloat(min).toFixed(2).replace('.', ',')} – ${this.currentSymbol}${parseFloat(max).toFixed(2).replace('.', ',')}`;
+                        } else if (min) {
+                            display = `Vanaf ${this.currentSymbol}${parseFloat(min).toFixed(2).replace('.', ',')}`;
+                        } else if (max) {
+                            display = `Tot ${this.currentSymbol}${parseFloat(max).toFixed(2).replace('.', ',')}`;
+                        }
+                        costDisplayEl.textContent = display;
+                    }
+
                     updateUI() {
+                        console.log('🔄 records-grouped updateUI() CALLED with symbol:', this.currentSymbol, 'rate:', this
+                            .currentRate);
                         // Update currency symbol in selector
                         document.getElementById('currency-symbol').textContent = this.currentSymbol;
                         document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
@@ -759,11 +822,16 @@
                         updateCostDisplay();
 
                         // Update all cost displays in grouped records
-                        document.querySelectorAll('[data-cost-original]').forEach(el => {
+                        const costElements = document.querySelectorAll('[data-cost-original]');
+                        console.log('Found', costElements.length, 'elements with [data-cost-original]');
+                        costElements.forEach((el, index) => {
                             const originalCost = parseFloat(el.dataset.costOriginal);
                             const convertedCost = (originalCost * this.currentRate).toFixed(2);
+                            console.log('Element', index, '- Original EUR:', originalCost, '→ Converted:',
+                                convertedCost, this.currentSymbol);
                             el.textContent = convertedCost.replace('.', ',');
                         });
+                        console.log('✓ Updated all cost elements');
 
                         // Update cost range display text with current symbol
                         const costDisplayEl = document.getElementById('cost-range-display');
@@ -784,6 +852,27 @@
                 }
 
                 const converter = new CurrencyConverter();
+
+                // Listen for localStorage changes (from dashboard or other tabs)
+                window.addEventListener('storage', function(event) {
+                    if (event.key === 'selectedCurrency') {
+                        console.log('📢 Storage event detected: selectedCurrency changed');
+                        // Parse the saved currency
+                        const [currency, rate, symbol] = event.newValue.split('|');
+                        converter.currentCurrency = currency;
+                        converter.currentRate = parseFloat(rate);
+                        converter.currentSymbol = symbol;
+                        console.log('✓ Updated converter from storage event:', currency, symbol);
+                        // Update UI with new currency
+                        converter.updateUI();
+                    }
+                });
+
+                // Restore UI state when DOM is ready (so all cost elements are loaded)
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('DOMContentLoaded: Restoring currency UI state');
+                    converter.restoreUIState();
+                });
 
                 // Listen to input changes and store original values
                 minInput.addEventListener('input', () => {

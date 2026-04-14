@@ -229,6 +229,14 @@
                         hideModal();
                     }
                 });
+
+                // ** CRITICAL: Define chartInstances and storeChartInstance BEFORE charts.blade.php is included
+                // This must be done here so that charts.blade.php's script tags can register the chart instances
+                let chartInstances = {};
+                window.storeChartInstance = function(name, instance) {
+                    chartInstances[name] = instance;
+                    console.log('✓ Stored chart instance:', name, 'Total instances:', Object.keys(chartInstances).length);
+                };
             </script>
         </div>
 
@@ -654,6 +662,9 @@
         </style>
 
         <script>
+            // chartInstances already defined in the first script block (before charts.blade.php is included)
+            // storeChartInstance already defined in the first script block
+
             // Copy DatePicker class from records-grouped (simplified for dashboard)
             class DatePicker {
                 constructor(buttonId, calendarId, displayId, inputId) {
@@ -878,12 +889,26 @@
             // Currency Converter
             class CurrencyConverter {
                 constructor() {
-                    this.currentCurrency = 'EUR';
-                    this.currentRate = 1.0;
-                    this.currentSymbol = '€';
+                    // Load saved currency from localStorage, default to EUR
+                    const savedCurrency = localStorage.getItem('selectedCurrency');
+
+                    if (savedCurrency) {
+                        const [currency, rate, symbol] = savedCurrency.split('|');
+                        this.currentCurrency = currency;
+                        this.currentRate = parseFloat(rate);
+                        this.currentSymbol = symbol;
+                        console.log('✓ Loaded saved currency from localStorage:', this.currentCurrency);
+                    } else {
+                        this.currentCurrency = 'EUR';
+                        this.currentRate = 1.0;
+                        this.currentSymbol = '€';
+                        console.log('✓ No saved currency, using default EUR');
+                    }
+
                     this.originalMinValue = minInput.value ? parseFloat(minInput.value) : null;
                     this.originalMaxValue = maxInput.value ? parseFloat(maxInput.value) : null;
                     this.init();
+                    // NOTE: restoreUIState() is called from DOMContentLoaded to ensure all elements are loaded
                 }
 
                 init() {
@@ -903,6 +928,10 @@
                             this.currentCurrency = btn.dataset.currency;
                             this.currentRate = parseFloat(btn.dataset.rate);
                             this.currentSymbol = btn.dataset.symbol;
+                            // Save to localStorage
+                            localStorage.setItem('selectedCurrency',
+                                `${this.currentCurrency}|${this.currentRate}|${this.currentSymbol}`);
+                            console.log('✓ Saved to localStorage:', this.currentCurrency);
                             this.updateUI();
                             currencyPicker.classList.add('hidden');
                         });
@@ -915,12 +944,79 @@
                     });
                 }
 
+                restoreUIState() {
+                    // Update UI to reflect loaded/saved currency without triggering dashboard update
+                    console.log('restoreUIState() called, symbol:', this.currentSymbol);
+
+                    try {
+                        document.getElementById('currency-symbol').textContent = this.currentSymbol;
+                        console.log('✓ Updated currency-symbol');
+                    } catch (e) {
+                        console.error('Failed to update currency-symbol:', e);
+                    }
+
+                    try {
+                        document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
+                        console.log('✓ Updated min-currency-symbol');
+                    } catch (e) {
+                        console.error('Failed to update min-currency-symbol:', e);
+                    }
+
+                    try {
+                        document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
+                        console.log('✓ Updated max-currency-symbol');
+                    } catch (e) {
+                        console.error('Failed to update max-currency-symbol:', e);
+                    }
+
+                    if (this.originalMinValue !== null) {
+                        minInput.value = (this.originalMinValue * this.currentRate).toFixed(2);
+                    }
+                    if (this.originalMaxValue !== null) {
+                        maxInput.value = (this.originalMaxValue * this.currentRate).toFixed(2);
+                    }
+                }
+
                 updateUI() {
+                    console.log('🔄 updateUI() CALLED - about to update symbols');
                     console.log('CurrencyConverter.updateUI() called, currency:', this.currentCurrency, 'rate:', this
-                        .currentRate);
-                    document.getElementById('currency-symbol').textContent = this.currentSymbol;
-                    document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
-                    document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
+                        .currentRate, 'symbol:', this.currentSymbol);
+
+                    try {
+                        const currencySymbol = document.getElementById('currency-symbol');
+                        if (currencySymbol) {
+                            currencySymbol.textContent = this.currentSymbol;
+                            console.log('✓ Updated currency-symbol to:', this.currentSymbol);
+                        } else {
+                            console.error('❌ currency-symbol element not found');
+                        }
+                    } catch (e) {
+                        console.error('Error updating currency-symbol:', e);
+                    }
+
+                    try {
+                        const minSymbol = document.getElementById('min-currency-symbol');
+                        if (minSymbol) {
+                            minSymbol.textContent = this.currentSymbol;
+                            console.log('✓ Updated min-currency-symbol to:', this.currentSymbol);
+                        } else {
+                            console.error('❌ min-currency-symbol element not found');
+                        }
+                    } catch (e) {
+                        console.error('Error updating min-currency-symbol:', e);
+                    }
+
+                    try {
+                        const maxSymbol = document.getElementById('max-currency-symbol');
+                        if (maxSymbol) {
+                            maxSymbol.textContent = this.currentSymbol;
+                            console.log('✓ Updated max-currency-symbol to:', this.currentSymbol);
+                        } else {
+                            console.error('❌ max-currency-symbol element not found');
+                        }
+                    } catch (e) {
+                        console.error('Error updating max-currency-symbol:', e);
+                    }
 
                     if (this.originalMinValue !== null) {
                         minInput.value = (this.originalMinValue * this.currentRate).toFixed(2);
@@ -962,18 +1058,8 @@
 
         {{-- Real-time Dashboard Filtering --}}
         <script>
-            let chartInstances = {
-                actionsPerMonth: null,
-                costPerEmployee: null,
-                actionsByType: null,
-                kostenPerMaand: null
-            };
-
-            // Store original chart data in EUR for currency conversion
-            let originalChartData = {
-                costPerEmployee: {},
-                kostenPerMaand: {}
-            };
+            // chartInstances already defined at top of script
+            // storeChartInstance already defined at top of script
 
             let currentFilters = {
                 search: '{{ $search ?? '' }}',
@@ -985,18 +1071,34 @@
                 currency_rate: 1.0
             };
 
-            // Store chart instances when they're created
-            window.storeChartInstance = function(name, instance) {
-                chartInstances[name] = instance;
-            };
+            // Update currentFilters with saved currency from CurrencyConverter
+            currentFilters.currency = window.currencyConverter.currentCurrency;
+            currentFilters.currency_rate = window.currencyConverter.currentRate;
+            console.log('✓ Updated currentFilters with saved currency:', currentFilters.currency, 'rate:', currentFilters
+                .currency_rate);
 
             // Initialize dashboard on page load
             document.addEventListener('DOMContentLoaded', function() {
+                // Check if saved currency is different from EUR
+                const hasSavedCurrency = window.currencyConverter.currentCurrency !== 'EUR';
+
                 // If there are any active filters, update the dashboard data
                 const hasActiveFilters = currentFilters.search || currentFilters.from_date || currentFilters
                     .to_date ||
                     currentFilters.min_cost || currentFilters.max_cost;
-                if (hasActiveFilters) {
+
+                // First: Update UI with correct currency symbols (with small delay to ensure DOM is ready)
+                if (hasSavedCurrency) {
+                    console.log('Restoring UI state with saved currency:', window.currencyConverter.currentCurrency);
+                    setTimeout(() => {
+                        window.currencyConverter.restoreUIState();
+                    }, 50);
+                }
+
+                // Then: Update dashboard data if there are active filters OR if a non-EUR currency is saved
+                if (hasActiveFilters || hasSavedCurrency) {
+                    console.log('Triggering updateDashboardData - hasSavedCurrency:', hasSavedCurrency,
+                        'hasActiveFilters:', hasActiveFilters);
                     // Small delay to ensure DOM is ready
                     setTimeout(() => updateDashboardData(), 100);
                 }
@@ -1135,43 +1237,61 @@
 
             // Update charts with new data
             function updateCharts(chartsData, kostenPerMaandData, currencyInfo) {
-                // Update Actions Per Month chart
+                console.log('updateCharts called with rate:', currencyInfo.rate);
+
+                // Use ORIGINAL EUR data for conversion, not the data passed in
+                // This prevents double-conversion when switching currencies
+                const originalChartData = window.originalChartData || chartsData;
+                const originalKostenPerMaandData = window.originalKostenPerMaandData || kostenPerMaandData;
+
+                // Update Actions Per Month chart (non-currency, no conversion needed)
                 if (window.actionsPerMonthChart && chartInstances.actionsPerMonth) {
-                    chartInstances.actionsPerMonth.data.labels = Object.keys(chartsData.actionsPerMonth || {});
-                    chartInstances.actionsPerMonth.data.datasets[0].data = Object.values(chartsData.actionsPerMonth || {});
+                    const labels = Object.keys(originalChartData.actionsPerMonth || {});
+                    const data = Object.values(originalChartData.actionsPerMonth || {});
+                    chartInstances.actionsPerMonth.data.labels = labels;
+                    chartInstances.actionsPerMonth.data.datasets[0].data = data;
                     chartInstances.actionsPerMonth.update();
+                    console.log('✓ actionsPerMonth updated');
                 }
 
-                // Update Cost Per Employee chart - convert EUR to current currency
+                // Update Cost Per Employee chart - convert from ORIGINAL EUR data
                 if (window.costPerEmployeeChart && chartInstances.costPerEmployee) {
-                    const convertedData = Object.values(chartsData.costPerEmployee || {})
-                        .map(v => Math.round(v * currencyInfo.rate * 100) / 100);
-                    chartInstances.costPerEmployee.data.labels = Object.keys(chartsData.costPerEmployee || {});
+                    const originalData = Object.values(originalChartData.costPerEmployee || {});
+                    const convertedData = originalData.map(v => Math.round(v * currencyInfo.rate * 100) / 100);
+                    chartInstances.costPerEmployee.data.labels = Object.keys(originalChartData.costPerEmployee || {});
                     chartInstances.costPerEmployee.data.datasets[0].data = convertedData;
                     chartInstances.costPerEmployee.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
                     chartInstances.costPerEmployee.update();
+                    console.log('✓ costPerEmployee updated with rate', currencyInfo.rate, 'converted data:', convertedData);
                 }
 
-                // Update Actions By Type chart
+                // Update Actions By Type chart (non-currency, no conversion needed)
                 if (window.actionsByTypeChart && chartInstances.actionsByType) {
-                    chartInstances.actionsByType.data.labels = Object.keys(chartsData.actionsByType || {});
-                    chartInstances.actionsByType.data.datasets[0].data = Object.values(chartsData.actionsByType || {});
+                    const labels = Object.keys(originalChartData.actionsByType || {});
+                    const data = Object.values(originalChartData.actionsByType || {});
+                    chartInstances.actionsByType.data.labels = labels;
+                    chartInstances.actionsByType.data.datasets[0].data = data;
                     chartInstances.actionsByType.update();
+                    console.log('✓ actionsByType updated');
                 }
 
-                // Update Kosten Per Maand chart - convert EUR to current currency
+                // Update Kosten Per Maand chart - convert from ORIGINAL EUR data
                 if (window.kostenPerMaandChart && chartInstances.kostenPerMaand) {
-                    console.log('Updating kostenPerMaand chart with data:', kostenPerMaandData);
-                    const convertedData = Object.values(kostenPerMaandData || {})
-                        .map(v => Math.round(v * currencyInfo.rate * 100) / 100);
-                    chartInstances.kostenPerMaand.data.labels = Object.keys(kostenPerMaandData || {});
+                    const originalData = Object.values(originalKostenPerMaandData || {});
+                    console.log('Original kostenPerMaand EUR data:', originalData);
+                    const convertedData = originalData.map(v => Math.round(v * currencyInfo.rate * 100) / 100);
+                    console.log('Converted kostenPerMaand data (×' + currencyInfo.rate + '):', convertedData);
+
+                    chartInstances.kostenPerMaand.data.labels = Object.keys(originalKostenPerMaandData || {});
                     chartInstances.kostenPerMaand.data.datasets[0].data = convertedData;
                     chartInstances.kostenPerMaand.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
                     chartInstances.kostenPerMaand.update();
                     console.log('✓ kostenPerMaand chart updated');
+                } else {
+                    console.warn('⚠️ kostenPerMaand chart not ready');
                 }
 
-                // Update chart container titles
+                // Update chart container titles (run always, outside chart checks)
                 document.querySelectorAll('.border.border-white\\/8 h3').forEach(title => {
                     if (title.textContent.includes('Kosten per maand')) {
                         title.textContent = `Kosten per maand (${currencyInfo.symbol})`;
