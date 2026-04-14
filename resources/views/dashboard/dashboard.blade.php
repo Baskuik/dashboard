@@ -916,6 +916,17 @@
                     const currencyPicker = document.getElementById('currency-picker');
                     const currencyOptions = document.querySelectorAll('.currency-opt');
 
+                    // Update originalMinValue and originalMaxValue whenever the user edits the inputs
+                    minInput.addEventListener('input', () => {
+                        this.originalMinValue =
+                            minInput.value === '' ? null : parseFloat(minInput.value) / this.currentRate;
+                    });
+
+                    maxInput.addEventListener('input', () => {
+                        this.originalMaxValue =
+                            maxInput.value === '' ? null : parseFloat(maxInput.value) / this.currentRate;
+                    });
+
                     currencyBtn.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1174,7 +1185,14 @@
             }
 
             // Main function to fetch and update dashboard data
+            let dashboardRequestController = null;
+            let dashboardRequestSeq = 0;
+
             function updateDashboardData() {
+                const requestSeq = ++dashboardRequestSeq;
+                dashboardRequestController?.abort();
+                dashboardRequestController = new AbortController();
+
                 const currencyInfo = getCurrencyInfo();
 
                 // First sync the current filters (including currency)
@@ -1189,6 +1207,7 @@
                 // Fetch data from API
                 fetch('{{ route('api.dashboard-data') }}?' + queryParams.toString(), {
                         method: 'GET',
+                        signal: dashboardRequestController.signal,
                         headers: {
                             'Accept': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest'
@@ -1196,13 +1215,22 @@
                     })
                     .then(response => response.json())
                     .then(data => {
+                        // Ignore stale responses
+                        if (requestSeq !== dashboardRequestSeq) {
+                            return;
+                        }
+
                         updateStatCards(data.stats, currencyInfo);
                         updateCharts(data.charts, data.kostenPerMaand, currencyInfo);
                         updateCostDisplay();
                         // Re-initialize stat card handlers after updating
                         initStatCardHandlers();
                     })
-                    .catch(error => console.error('Error fetching dashboard data:', error));
+                    .catch(error => {
+                        if (error.name !== 'AbortError') {
+                            console.error('Error fetching dashboard data:', error);
+                        }
+                    });
             }
 
             // Update stat cards with new values

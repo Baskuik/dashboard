@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\UserDashboardWidget;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class DashboardWidgetController extends Controller
 {
@@ -33,24 +34,27 @@ class DashboardWidgetController extends Controller
     public function saveWidgets(Request $request)
     {
         $request->validate([
-            'widgets' => 'nullable|array',
-            'widgets.*' => 'string|in:actions_per_month,costs_per_month,costs_per_employee,actions_by_type',
+            'widgets' => 'required|array|min:1',
+            'widgets.*' => 'string|distinct|in:actions_per_month,costs_per_month,costs_per_employee,actions_by_type',
         ]);
 
         $userId = Auth::id();
         $widgets = $request->get('widgets', []);
 
-        // Delete existing widgets for this user
-        UserDashboardWidget::where('user_id', $userId)->delete();
+        // Use database transaction to ensure atomicity
+        DB::transaction(function () use ($userId, $widgets) {
+            // Delete existing widgets for this user
+            UserDashboardWidget::where('user_id', $userId)->delete();
 
-        // Insert new widgets with order (only if any are selected)
-        foreach ($widgets as $index => $widgetKey) {
-            UserDashboardWidget::create([
-                'user_id' => $userId,
-                'widget_key' => $widgetKey,
-                'order' => $index,
-            ]);
-        }
+            // Insert new widgets with order
+            foreach ($widgets as $index => $widgetKey) {
+                UserDashboardWidget::create([
+                    'user_id' => $userId,
+                    'widget_key' => $widgetKey,
+                    'order' => $index,
+                ]);
+            }
+        });
 
         return redirect()->route('dashboard')->with('success', 'Widgets bijgewerkt!');
     }

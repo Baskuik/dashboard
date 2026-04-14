@@ -79,6 +79,14 @@
         <form method="POST" action="{{ route('dashboard.save-widgets') }}" class="space-y-8">
             @csrf
 
+            @if ($errors->any())
+                <div class="mb-6 rounded-lg border border-red-500/20 bg-red-500/10 p-4">
+                    @foreach ($errors->all() as $error)
+                        <p class="text-sm text-red-300">{{ $error }}</p>
+                    @endforeach
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach ($availableWidgets as $widget)
                     <div class="widget-card group border-2 border-white/10 rounded-xl p-6 cursor-pointer transition hover:border-blue-500/50 hover:bg-white/5 flex flex-col"

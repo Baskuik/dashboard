@@ -46,7 +46,7 @@ class DashboardController extends Controller
             'total_actions' => (clone $records)->count(),
             'total_cost' => (clone $records)->sum('costs') ?? 0,
             'avg_duration' => (clone $records)->avg('time') ?? 0,
-            'total_employees' => (clone $records)->select('worker')->distinct()->count(),
+            'total_employees' => (clone $records)->distinct()->count('worker'),
         ];
     }
 
@@ -145,42 +145,39 @@ class DashboardController extends Controller
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
 
-        // Get all records from latest upload
+        // Build query with filters in SQL (avoid loading all records into memory)
         $query = Record::where('user_id', Auth::id());
         if ($latestUpload) {
             $query->where('upload_id', $latestUpload->bestand_id);
         }
-        $allRecords = $query->get();
 
-        // Apply filters
-        $records = $allRecords;
-
-        if ($search) {
-            $records = $records->filter(function ($record) use ($search) {
-                return stripos($record->worker, $search) !== false ||
-                    stripos($record->action, $search) !== false;
-            });
-        }
-
+        // Apply filters as SQL conditions
         if ($fromDate) {
-            $records = $records->filter(function ($record) use ($fromDate) {
-                return $record->date && $record->date >= $fromDate;
-            });
+            $query->whereDate('date', '>=', $fromDate);
         }
         if ($toDate) {
-            $records = $records->filter(function ($record) use ($toDate) {
-                return $record->date && $record->date <= $toDate;
-            });
+            $query->whereDate('date', '<=', $toDate);
         }
 
         if ($minCost !== null && $minCost !== '') {
-            $records = $records->filter(function ($record) use ($minCost) {
-                return $record->costs >= (float) $minCost;
-            });
+            $query->where('costs', '>=', (float) $minCost);
         }
         if ($maxCost !== null && $maxCost !== '') {
-            $records = $records->filter(function ($record) use ($maxCost) {
-                return $record->costs <= (float) $maxCost;
+            $query->where('costs', '<=', (float) $maxCost);
+        }
+
+        // Clone query for pagination (without search, will add in PHP after)
+        $paginationQuery = (clone $query)->orderByDesc('date');
+
+        // Get all records for stats and charts (filtered by basic conditions, search will be applied in PHP)
+        $allRecords = $query->get();
+
+        // Apply search filter in PHP (since LIKE doesn't work well with nullable columns in a generic way)
+        $records = $allRecords;
+        if ($search) {
+            $records = $records->filter(function ($record) use ($search) {
+                return stripos($record->worker ?? '', $search) !== false ||
+                    stripos($record->action ?? '', $search) !== false;
             });
         }
 
@@ -199,7 +196,7 @@ class DashboardController extends Controller
                 return \Carbon\Carbon::parse($record->date)->format('Y-m');
             })
             ->map(fn($group) => $group->count())
-            ->sortDesc()
+            ->sortKeys()
             ->toArray();
 
         $costPerEmployee = $records
@@ -224,6 +221,7 @@ class DashboardController extends Controller
                 return \Carbon\Carbon::parse($record->date)->format('Y-m');
             })
             ->map(fn($recs) => $recs->sum('costs'))
+            ->sortKeys()
             ->toArray();
 
         // Paginated records for display
@@ -275,42 +273,39 @@ class DashboardController extends Controller
             ->orderByDesc('created_at')
             ->first();
 
-        // Get all records from latest upload
+        // Build query with SQL filters (avoid loading all records into memory)
         $query = Record::where('user_id', Auth::id());
         if ($latestUpload) {
             $query->where('upload_id', $latestUpload->bestand_id);
         }
-        $allRecords = $query->get();
 
-        // Apply filters
-        $records = $allRecords;
-
-        if ($search) {
-            $records = $records->filter(function ($record) use ($search) {
-                return stripos($record->worker, $search) !== false ||
-                    stripos($record->action, $search) !== false;
-            });
-        }
-
+        // Apply date filters as SQL conditions
         if ($fromDate) {
-            $records = $records->filter(function ($record) use ($fromDate) {
-                return $record->date && $record->date >= $fromDate;
-            });
+            $query->whereDate('date', '>=', $fromDate);
         }
         if ($toDate) {
-            $records = $records->filter(function ($record) use ($toDate) {
-                return $record->date && $record->date <= $toDate;
-            });
+            $query->whereDate('date', '<=', $toDate);
         }
 
+        // Apply cost filters (normalized from display currency to EUR)
         if ($minCost !== null && $minCost !== '') {
-            $records = $records->filter(function ($record) use ($minCost) {
-                return $record->costs >= (float) $minCost;
-            });
+            $minCostEur = (float) $minCost / $currencyRate;
+            $query->where('costs', '>=', $minCostEur);
         }
         if ($maxCost !== null && $maxCost !== '') {
-            $records = $records->filter(function ($record) use ($maxCost) {
-                return $record->costs <= (float) $maxCost;
+            $maxCostEur = (float) $maxCost / $currencyRate;
+            $query->where('costs', '<=', $maxCostEur);
+        }
+
+        // Get filtered records (still need collection for search and aggregation)
+        $allRecords = $query->get();
+
+        // Apply search filter in PHP
+        $records = $allRecords;
+        if ($search) {
+            $records = $records->filter(function ($record) use ($search) {
+                return stripos($record->worker ?? '', $search) !== false ||
+                    stripos($record->action ?? '', $search) !== false;
             });
         }
 
@@ -330,7 +325,7 @@ class DashboardController extends Controller
                 return \Carbon\Carbon::parse($record->date)->format('Y-m');
             })
             ->map(fn($group) => $group->count())
-            ->sortDesc()
+            ->sortKeys()
             ->toArray();
 
         $costPerEmployee = $records
@@ -353,6 +348,7 @@ class DashboardController extends Controller
                 return \Carbon\Carbon::parse($record->date)->format('Y-m');
             })
             ->map(fn($recs) => $recs->sum('costs'))
+            ->sortKeys()
             ->toArray();
 
         return response()->json([
@@ -388,8 +384,8 @@ class DashboardController extends Controller
         // Filter by search term if provided
         if ($search) {
             $records = $records->filter(function ($record) use ($search) {
-                return stripos($record->worker, $search) !== false ||
-                    stripos($record->action, $search) !== false;
+                return stripos($record->worker ?? '', $search) !== false ||
+                    stripos($record->action ?? '', $search) !== false;
             });
         }
 
@@ -451,8 +447,8 @@ class DashboardController extends Controller
         // Filter by search term if provided
         if ($search) {
             $records = $records->filter(function ($record) use ($search) {
-                return stripos($record->action, $search) !== false ||
-                    stripos($record->worker, $search) !== false;
+                return stripos($record->action ?? '', $search) !== false ||
+                    stripos($record->worker ?? '', $search) !== false;
             });
         }
 
@@ -513,8 +509,8 @@ class DashboardController extends Controller
         // Filter by search term if provided
         if ($search) {
             $records = $records->filter(function ($record) use ($search) {
-                return stripos($record->worker, $search) !== false ||
-                    stripos($record->action, $search) !== false;
+                return stripos($record->worker ?? '', $search) !== false ||
+                    stripos($record->action ?? '', $search) !== false;
             });
         }
 
