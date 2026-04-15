@@ -1053,11 +1053,11 @@
                     .to_date ||
                     currentFilters.min_cost || currentFilters.max_cost;
 
-                // First: Update UI with correct currency symbols (with small delay to ensure DOM is ready)
+                // First: Update UI with correct currency symbols and stat cards (with small delay to ensure DOM is ready)
                 if (hasSavedCurrency) {
                     console.log('Restoring UI state with saved currency:', window.currencyConverter.currentCurrency);
                     setTimeout(() => {
-                        window.currencyConverter.restoreUIState();
+                        window.currencyConverter.updateUI();
                     }, 50);
                 }
 
@@ -1071,6 +1071,9 @@
 
                 // Initialize stat card handlers
                 initStatCardHandlers();
+
+                // Initialize counter animations AFTER all updates (with sufficient delay for currency conversion)
+                setTimeout(() => initializeCounterAnimations(), 200);
             });
 
             // Handle filter form submission via AJAX
@@ -1400,13 +1403,16 @@
             });
 
             // Animate number counters (for stats)
-            function animateValue(element, start, end, duration) {
+            // Bewaar prefix (bv. "€ ") en suffix (bv. "u") tijdens de animatie
+            function animateValue(element, start, end, duration, opts = {}) {
+                const prefix = opts.prefix || '';
+                const suffix = opts.suffix || '';
                 let startTimestamp = null;
                 const step = (timestamp) => {
                     if (!startTimestamp) startTimestamp = timestamp;
                     const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                     const value = Math.floor(progress * (end - start) + start);
-                    element.textContent = value.toLocaleString('nl-NL');
+                    element.textContent = `${prefix}${value.toLocaleString('nl-NL')}${suffix}`;
                     if (progress < 1) {
                         window.requestAnimationFrame(step);
                     }
@@ -1414,14 +1420,23 @@
                 window.requestAnimationFrame(step);
             }
 
-            // Apply counter animation to stat numbers
-            document.querySelectorAll('[class*="stat-card"] .mono').forEach(element => {
-                const text = element.textContent.trim();
-                const number = parseInt(text.replace(/\D/g, ''), 10);
-                if (!isNaN(number) && number > 0) {
-                    animateValue(element, 0, number, 1000);
-                }
-            });
+            function initializeCounterAnimations() {
+                // Pas de animatie alleen toe als we een getal vinden; behoud prefix/suffix
+                document.querySelectorAll('[class*="stat-card"] .mono').forEach(element => {
+                    const raw = element.textContent.trim();
+                    // Match: [prefix][number][suffix], waarbij prefix/suffix geen cijfers zijn
+                    const m = raw.match(/^(\D*?)[\s\u00A0]*([\d\.\,]+)[\s\u00A0]*(\D*)$/);
+                    if (!m) return;
+                    const [, prefix, numberPart, suffix] = m;
+                    const number = parseInt(numberPart.replace(/[^\d]/g, ''), 10);
+                    if (!isNaN(number) && number > 0) {
+                        animateValue(element, 0, number, 1000, {
+                            prefix: prefix || '',
+                            suffix: suffix || ''
+                        });
+                    }
+                });
+            }
         });
     </script>
 </body>
