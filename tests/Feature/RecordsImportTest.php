@@ -103,6 +103,34 @@ class RecordsImportTest extends TestCase
         $importer->import($filePath);
     }
 
+    public function test_import_supports_header_variations_with_shuffled_column_order(): void
+    {
+        $user = User::factory()->create();
+        $upload = Upload::create([
+            'user_id' => $user->id,
+            'filename' => 'records-import-header-variations.xlsx',
+            'status' => 'pending',
+        ]);
+
+        $filePath = $this->createSpreadsheet([
+            ['Date', 'Kosten (€)', 'Type', 'Medeweker', 'Details', 'Hours'],
+            ['2024-10-07', '69,35', 'Reparatie', 'Sanne', 'Defect onderdeel gerepareerd', '7,3'],
+        ]);
+
+        $importer = new RecordsImport($upload, $user->id);
+        $count = $importer->import($filePath);
+
+        $this->assertSame(1, $count);
+        $record = Record::query()->firstOrFail();
+
+        $this->assertSame('Sanne', $record->worker);
+        $this->assertSame('Reparatie', $record->action);
+        $this->assertSame('Defect onderdeel gerepareerd', $record->description);
+        $this->assertSame('2024-10-07', $record->date?->format('Y-m-d'));
+        $this->assertEquals(69.35, (float) $record->costs);
+        $this->assertEquals(7.3, (float) $record->time);
+    }
+
     private function createSpreadsheet(array $rows): string
     {
         $spreadsheet = new Spreadsheet;
