@@ -1209,9 +1209,11 @@
             // Sync filters when cost inputs change
             minInput.addEventListener('change', function() {
                 syncCurrentFilters();
+                updateDashboardData();
             });
             maxInput.addEventListener('change', function() {
                 syncCurrentFilters();
+                updateDashboardData();
             });
 
             // Helper to get currency info from the converter
@@ -1338,62 +1340,53 @@
             }
 
             // Update charts with new data
+            // Update charts with new data
             function updateCharts(chartsData, kostenPerMaandData, currencyInfo) {
                 console.log('updateCharts called with rate:', currencyInfo.rate);
 
-                // Use ORIGINAL EUR data for conversion, not the data passed in
-                // This prevents double-conversion when switching currencies
-                const originalChartData = window.originalChartData || chartsData;
-                const originalKostenPerMaandData = window.originalKostenPerMaandData || kostenPerMaandData;
+                // Refresh the cached "original EUR" data with the latest (possibly filtered) data
+                window.originalChartData = chartsData;
+                window.originalKostenPerMaandData = kostenPerMaandData;
 
-                // Update Actions Per Month chart (non-currency, no conversion needed)
-                if (window.actionsPerMonthChart && chartInstances.actionsPerMonth) {
-                    const labels = Object.keys(originalChartData.actionsPerMonth || {});
-                    const data = Object.values(originalChartData.actionsPerMonth || {});
-                    chartInstances.actionsPerMonth.data.labels = labels;
-                    chartInstances.actionsPerMonth.data.datasets[0].data = data;
-                    chartInstances.actionsPerMonth.update();
+                // Update Actions Per Month chart (no currency conversion)
+                if (window.actionsPerMonthChart) {
+                    window.actionsPerMonthChart.data.labels = Object.keys(chartsData.actionsPerMonth || {});
+                    window.actionsPerMonthChart.data.datasets[0].data = Object.values(chartsData.actionsPerMonth || {});
+                    window.actionsPerMonthChart.update();
                     console.log('✓ actionsPerMonth updated');
                 }
 
-                // Update Cost Per Employee chart - convert from ORIGINAL EUR data
-                if (window.costPerEmployeeChart && chartInstances.costPerEmployee) {
-                    const originalData = Object.values(originalChartData.costPerEmployee || {});
-                    const convertedData = originalData.map(v => Math.round(v * currencyInfo.rate * 100) / 100);
-                    chartInstances.costPerEmployee.data.labels = Object.keys(originalChartData.costPerEmployee || {});
-                    chartInstances.costPerEmployee.data.datasets[0].data = convertedData;
-                    chartInstances.costPerEmployee.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
-                    chartInstances.costPerEmployee.update();
-                    console.log('✓ costPerEmployee updated with rate', currencyInfo.rate, 'converted data:', convertedData);
+                // Update Cost Per Employee chart — convert EUR → selected currency
+                if (window.costPerEmployeeChart) {
+                    const empData = Object.values(chartsData.costPerEmployee || {});
+                    const convertedEmp = empData.map(v => Math.round(v * currencyInfo.rate * 100) / 100);
+                    window.costPerEmployeeChart.data.labels = Object.keys(chartsData.costPerEmployee || {});
+                    window.costPerEmployeeChart.data.datasets[0].data = convertedEmp;
+                    window.costPerEmployeeChart.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
+                    window.costPerEmployeeChart.update();
+                    console.log('✓ costPerEmployee updated');
                 }
 
-                // Update Actions By Type chart (non-currency, no conversion needed)
-                if (window.actionsByTypeChart && chartInstances.actionsByType) {
-                    const labels = Object.keys(originalChartData.actionsByType || {});
-                    const data = Object.values(originalChartData.actionsByType || {});
-                    chartInstances.actionsByType.data.labels = labels;
-                    chartInstances.actionsByType.data.datasets[0].data = data;
-                    chartInstances.actionsByType.update();
+                // Update Actions By Type chart (no currency conversion)
+                if (window.actionsByTypeChart) {
+                    window.actionsByTypeChart.data.labels = Object.keys(chartsData.actionsByType || {});
+                    window.actionsByTypeChart.data.datasets[0].data = Object.values(chartsData.actionsByType || {});
+                    window.actionsByTypeChart.update();
                     console.log('✓ actionsByType updated');
                 }
 
-                // Update Kosten Per Maand chart - convert from ORIGINAL EUR data
-                if (window.kostenPerMaandChart && chartInstances.kostenPerMaand) {
-                    const originalData = Object.values(originalKostenPerMaandData || {});
-                    console.log('Original kostenPerMaand EUR data:', originalData);
-                    const convertedData = originalData.map(v => Math.round(v * currencyInfo.rate * 100) / 100);
-                    console.log('Converted kostenPerMaand data (×' + currencyInfo.rate + '):', convertedData);
-
-                    chartInstances.kostenPerMaand.data.labels = Object.keys(originalKostenPerMaandData || {});
-                    chartInstances.kostenPerMaand.data.datasets[0].data = convertedData;
-                    chartInstances.kostenPerMaand.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
-                    chartInstances.kostenPerMaand.update();
-                    console.log('✓ kostenPerMaand chart updated');
-                } else {
-                    console.warn('⚠️ kostenPerMaand chart not ready');
+                // Update Kosten Per Maand chart — convert EUR → selected currency
+                if (window.kostenPerMaandChart) {
+                    const maandData = Object.values(kostenPerMaandData || {});
+                    const convertedMaand = maandData.map(v => Math.round(v * currencyInfo.rate * 100) / 100);
+                    window.kostenPerMaandChart.data.labels = Object.keys(kostenPerMaandData || {});
+                    window.kostenPerMaandChart.data.datasets[0].data = convertedMaand;
+                    window.kostenPerMaandChart.data.datasets[0].label = `Kosten (${currencyInfo.symbol})`;
+                    window.kostenPerMaandChart.update();
+                    console.log('✓ kostenPerMaand updated');
                 }
 
-                // Update chart container titles (run always, outside chart checks)
+                // Update chart container titles
                 document.querySelectorAll('.border.border-white\\/8 h3').forEach(title => {
                     if (title.textContent.includes('Kosten per maand')) {
                         title.textContent = `Kosten per maand (${currencyInfo.symbol})`;
@@ -1401,7 +1394,6 @@
                         title.textContent = `Kosten per medewerker (${currencyInfo.symbol})`;
                     }
                 });
-
             }
 
             // User menu click handler handled by navbar component
