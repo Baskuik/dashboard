@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Upload;
 use App\Models\Record;
 use App\Imports\RecordsImport;
+use App\Notifications\UploadCompletedNotification;
+use App\Notifications\UploadFailedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class UploadController extends Controller
 {
@@ -70,6 +73,17 @@ class UploadController extends Controller
                 'processed_rows' => $count,
             ]);
 
+            // Invalidate dashboard cache after successful upload
+            $userId = Auth::id();
+            Cache::forget("dashboard_stats_{$userId}");
+            Cache::forget("dashboard_chart_{$userId}");
+            Cache::forget("dashboard_kosten_{$userId}");
+
+            // Send notification email
+            if ($count > 0) {
+                Auth::user()->notify(new UploadCompletedNotification($upload, $count));
+            }
+
             return redirect()->route('dashboard')
                 ->with('success', "'{$fileName}' succesvol geüpload ({$count} rijen verwerkt).");
 
@@ -80,6 +94,9 @@ class UploadController extends Controller
             ]);
 
             $upload->update(['status' => 'failed']);
+
+            // Send failure notification email
+            Auth::user()->notify(new UploadFailedNotification($upload, $e->getMessage()));
 
             return redirect()->route('dashboard')
                 ->withErrors(['file' => 'Upload mislukt: ' . $e->getMessage()]);

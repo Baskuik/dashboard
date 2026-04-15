@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="nl" class="dark">
 
 <head>
     <meta charset="utf-8">
@@ -31,15 +31,50 @@
         .stat-card:hover {
             background: rgba(59, 130, 246, 0.08) !important;
         }
+
+        /* Light mode styles */
+        html:not(.dark) {
+            color-scheme: light;
+        }
+
+        html:not(.dark) body {
+            @apply bg-gray-50 text-gray-900;
+        }
+
+        html:not(.dark) input::placeholder,
+        html:not(.dark) textarea::placeholder {
+            @apply text-gray-400;
+        }
+
+        /* Dark mode styles (default) */
+        html.dark {
+            color-scheme: dark;
+        }
+
+        html.dark body {
+            @apply bg-[#0b0f1a] text-gray-100;
+        }
     </style>
 </head>
 
-<body class="bg-[#0b0f1a] text-gray-100 min-h-screen">
+<body class="bg-[#0b0f1a] dark:bg-[#0b0f1a] text-gray-100 dark:text-gray-100 min-h-screen">
+    <!-- Theme Initialization -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            const html = document.documentElement;
+            if (theme === 'light') {
+                html.classList.remove('dark');
+            } else {
+                html.classList.add('dark');
+            }
+        })();
+    </script>
 
     {{-- Navigation --}}
     <x-navbar>
-        <span class="text-white/20 text-sm">/</span>
-        <span class="text-gray-400 text-sm">Dashboard</span>
+        <span class="text-white/20 dark:text-white/20 text-sm">/</span>
+        <span class="text-gray-400 dark:text-gray-400 text-sm">Dashboard</span>
     </x-navbar>
 
     <main class="max-w-7xl mx-auto px-6 lg:px-8 py-10">
