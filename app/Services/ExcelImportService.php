@@ -39,7 +39,7 @@ class ExcelImportService
             }
 
             // First row is headers
-            $headers = array_map('strtolower', array_map('trim', $data[0]));
+            $headers = array_map(fn($header) => $this->normalizeHeader($header), $data[0]);
             Log::debug('ExcelImportService: Excel headers gevonden', ['headers' => $headers]);
 
             // Detect columns
@@ -108,27 +108,57 @@ class ExcelImportService
         $patterns = [
             'action' => ['actie', 'action'],
             'date' => ['datum', 'date'],
-            'description' => ['omschrijving', 'description'],
-            'worker' => ['medewerker', 'worker'],
-            'time' => ['uren', 'time', 'hours'],
-            'costs' => ['kosten (€)', 'kosten', 'costs', 'bedrag'],
+            'description' => ['omschrijving', 'beschrijving', 'description', 'toelichting', 'details'],
+            'worker' => ['medewerker', 'worker', 'werknemer', 'employee'],
+            'time' => ['uren', 'time', 'hours', 'duur', 'tijd'],
+            'costs' => ['kosten', 'costs', 'bedrag', 'amount', 'prijs', 'tarief'],
         ];
 
         $columns = [];
+        $normalizedHeaders = array_map(fn($header) => $this->normalizeHeader($header), $headers);
+
+        Log::debug('ExcelImportService: Detecteer kolommen', [
+            'headers' => $normalizedHeaders,
+        ]);
 
         foreach ($patterns as $field => $possibleNames) {
             $columns[$field] = null;
-            foreach ($headers as $idx => $header) {
+            foreach ($normalizedHeaders as $idx => $header) {
                 foreach ($possibleNames as $name) {
                     if (strpos($header, $name) !== false) {
-                        $columns[$field] = $header;
+                        $columns[$field] = $normalizedHeaders[$idx];
+                        Log::debug('ExcelImportService: Kolom gevonden', [
+                            'field' => $field,
+                            'header' => $columns[$field],
+                            'matched_pattern' => $name,
+                        ]);
                         break 2;
                     }
                 }
             }
+
+            if ($columns[$field] === null) {
+                Log::warning('ExcelImportService: Kolom niet gevonden', [
+                    'field' => $field,
+                    'expected_patterns' => $possibleNames,
+                    'headers' => $normalizedHeaders,
+                ]);
+            }
         }
 
         return $columns;
+    }
+
+    private function normalizeHeader(mixed $value): string
+    {
+        $header = (string) ($value ?? '');
+        $header = preg_replace('/^\xEF\xBB\xBF/', '', $header) ?? $header; // UTF-8 BOM
+        $header = str_replace("\xC2\xA0", ' ', $header); // NBSP
+        $header = mb_strtolower(trim($header));
+        $header = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $header) ?? $header;
+        $header = preg_replace('/\s+/u', ' ', $header) ?? $header;
+
+        return trim($header);
     }
 
     private function findUploadFile(string $fileName): string
@@ -170,6 +200,7 @@ class ExcelImportService
         }
 
         $value = trim((string) $value);
+        $value = preg_replace('/[€$£\s]/u', '', $value) ?? $value;
 
         if (strpos($value, ',') !== false && strpos($value, '.') !== false) {
             if (strrpos($value, ',') > strrpos($value, '.')) {
@@ -182,7 +213,6 @@ class ExcelImportService
             $value = str_replace(',', '.', $value);
         }
 
-        $numeric = (float) $value;
-        return $numeric > 0 ? $numeric : null;
+        return is_numeric($value) ? (float) $value : null;
     }
 }
