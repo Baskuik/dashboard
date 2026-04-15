@@ -1088,7 +1088,8 @@
                     currentFilters.min_cost || currentFilters.max_cost;
 
                 // First: Restore UI state with correct currency and convert input values
-                console.log('DOMContentLoaded: Restoring currency UI state with:', window.currencyConverter.currentCurrency);
+                console.log('DOMContentLoaded: Restoring currency UI state with:', window.currencyConverter
+                    .currentCurrency);
                 window.currencyConverter.restoreUIState();
 
                 // Then animate if currency changed
