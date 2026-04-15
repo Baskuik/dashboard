@@ -4,10 +4,12 @@ namespace App\Imports;
 
 use App\Models\Record;
 use App\Models\Upload;
+use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class RecordsImport
 {
@@ -19,32 +21,43 @@ class RecordsImport
 
     public function import(string $filePath): int
     {
-        Log::info('RecordsImport gestart', [
+        Log::info('RecordsImport: import gestart', [
             'filePath' => $filePath,
             'file_exists' => file_exists($filePath),
         ]);
 
-        $spreadsheet = IOFactory::load($filePath);
-        $worksheet = $spreadsheet->getActiveSheet();
-        $rows = $worksheet->toArray();
+        if (!file_exists($filePath)) {
+            throw new \RuntimeException("Importbestand niet gevonden: {$filePath}");
+        }
+
+        try {
+            $spreadsheet = IOFactory::load($filePath);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+        } catch (Throwable $exception) {
+            Log::error('RecordsImport: bestand kon niet worden gelezen', [
+                'filePath' => $filePath,
+                'error' => $exception->getMessage(),
+            ]);
+            throw new \RuntimeException('Excelbestand kon niet worden gelezen.', 0, $exception);
+        }
 
         if (empty($rows)) {
-            Log::warning('RecordsImport: bestand is leeg');
+            Log::warning('RecordsImport: bestand is leeg', ['filePath' => $filePath]);
             return 0;
         }
 
-        // Eerste rij = headers
         $rawHeaders = $rows[0];
-        $headers = array_map(fn($h) => $this->normalizeHeader($h), $rawHeaders);
+        $headers = array_map(fn($header) => $this->normalizeHeader($header), $rawHeaders);
         $columns = $this->detectColumns($headers);
 
-        Log::info('RecordsImport headers en kolommen gedetecteerd', [
+        Log::info('RecordsImport: headers en kolomposities gedetecteerd', [
             'raw_headers' => $rawHeaders,
             'normalized_headers' => $headers,
-            'detected_columns' => $columns,
+            'column_positions' => $columns,
         ]);
 
-        $requiredColumns = ['action', 'date', 'worker', 'time', 'costs'];
+        $requiredColumns = ['worker', 'action', 'costs', 'time', 'date'];
         $missingRequiredColumns = array_values(array_filter(
             $requiredColumns,
             fn($column) => $columns[$column] === null
@@ -53,7 +66,7 @@ class RecordsImport
         if ($missingRequiredColumns !== []) {
             Log::error('RecordsImport: verplichte kolommen ontbreken', [
                 'missing_columns' => $missingRequiredColumns,
-                'detected_columns' => $columns,
+                'column_positions' => $columns,
                 'headers' => $headers,
             ]);
 
@@ -65,17 +78,17 @@ class RecordsImport
         $count = 0;
         $skipped = 0;
 
-        for ($i = 1; $i < count($rows); $i++) {
-            $row = $rows[$i];
+        for ($index = 1; $index < count($rows); $index++) {
+            $row = $rows[$index];
+            $rowNumber = $index + 1;
 
-            // Lege rijen overslaan
-            if (empty(array_filter($row, fn($v) => $v !== null && $v !== ''))) {
+            if (!$this->rowHasContent($row)) {
                 continue;
             }
 
             if (count($row) !== count($headers)) {
                 Log::debug('RecordsImport: rij/header lengte mismatch', [
-                    'row_number' => $i + 1,
+                    'row_number' => $rowNumber,
                     'header_count' => count($headers),
                     'row_count' => count($row),
                     'row' => $row,
@@ -84,46 +97,58 @@ class RecordsImport
 
             $action = trim((string) $this->valueAt($row, $columns['action']));
             $date = $this->valueAt($row, $columns['date']);
+            $worker = trim((string) $this->valueAt($row, $columns['worker']));
+            $description = trim((string) $this->valueAt($row, $columns['description']));
+            $time = $this->parseNumeric($this->valueAt($row, $columns['time']));
+            $costs = $this->parseNumeric($this->valueAt($row, $columns['costs']));
+            $parsedDate = $this->parseDate($date);
 
-            // Rijen zonder actie én datum overslaan
+            Log::debug('RecordsImport: rijwaarden geëxtraheerd', [
+                'row_number' => $rowNumber,
+                'worker' => $worker,
+                'action' => $action,
+                'description' => $description,
+                'time' => $time,
+                'costs' => $costs,
+                'date' => $parsedDate,
+            ]);
+
             if (empty($action) && empty($date)) {
                 continue;
             }
 
-            // Totaalrij overslaan
             if (strtolower($action) === 'totaal') {
                 continue;
             }
 
-            // Voorbereiding van record data
             $recordData = [
                 'upload_id' => $this->upload->bestand_id,
                 'user_id' => $this->userId,
-                'date' => $this->parseDate($date),
+                'date' => $parsedDate,
                 'action' => $action,
-                'description' => trim((string) $this->valueAt($row, $columns['description'])),
-                'worker' => trim((string) $this->valueAt($row, $columns['worker'])),
-                'time' => $this->parseNumeric($this->valueAt($row, $columns['time'])),
-                'costs' => $this->parseNumeric($this->valueAt($row, $columns['costs'])),
+                'description' => $description,
+                'worker' => $worker,
+                'time' => $time,
+                'costs' => $costs,
             ];
 
-            // Valideer record data
             try {
                 $validated = Record::validateRecord($recordData);
                 Record::create($validated);
                 $count++;
-            } catch (\Illuminate\Validation\ValidationException $e) {
+            } catch (ValidationException $exception) {
                 $skipped++;
                 Log::warning('RecordsImport: rij skipped vanwege validatie fouten', [
-                    'row_number' => $i + 1,
-                    'errors' => $e->errors(),
+                    'row_number' => $rowNumber,
+                    'errors' => $exception->errors(),
                     'data' => $recordData,
                 ]);
-            } catch (\Exception $e) {
+            } catch (Throwable $exception) {
                 $skipped++;
                 Log::error('RecordsImport: rij skipped vanwege error', [
-                    'row_number' => $i + 1,
-                    'error' => $e->getMessage(),
+                    'row_number' => $rowNumber,
+                    'error' => $exception->getMessage(),
+                    'data' => $recordData,
                 ]);
             }
         }
@@ -139,7 +164,7 @@ class RecordsImport
 
     private function parseDate(mixed $value): ?string
     {
-        if (empty($value))
+        if ($value === null || $value === '')
             return null;
 
         if (is_numeric($value)) {
@@ -161,6 +186,7 @@ class RecordsImport
     {
         if ($value === null || $value === '')
             return null;
+
         if (is_numeric($value))
             return (float) $value;
 
@@ -219,11 +245,16 @@ class RecordsImport
             'costs' => ['kosten', 'costs', 'bedrag', 'amount', 'prijs', 'tarief'],
         ];
 
-        $columns = [];
+        $columns = [
+            'worker' => null,
+            'action' => null,
+            'description' => null,
+            'time' => null,
+            'costs' => null,
+            'date' => null,
+        ];
 
         foreach ($patterns as $field => $possibleNames) {
-            $columns[$field] = null;
-
             foreach ($headers as $index => $header) {
                 foreach ($possibleNames as $name) {
                     if ($header !== '' && strpos($header, $name) !== false) {
@@ -231,6 +262,21 @@ class RecordsImport
                         break 2;
                     }
                 }
+            }
+        }
+
+        $fallbackPositions = [
+            'worker' => 1,
+            'action' => 2,
+            'costs' => 3,
+            'time' => 4,
+            'description' => 5,
+            'date' => 7,
+        ];
+
+        foreach ($fallbackPositions as $field => $position) {
+            if ($columns[$field] === null && array_key_exists($position, $headers)) {
+                $columns[$field] = $position;
             }
         }
 
@@ -244,5 +290,13 @@ class RecordsImport
         }
 
         return $row[$index] ?? null;
+    }
+
+    private function rowHasContent(array $row): bool
+    {
+        return !empty(array_filter(
+            $row,
+            fn($value) => $value !== null && trim((string) $value) !== ''
+        ));
     }
 }

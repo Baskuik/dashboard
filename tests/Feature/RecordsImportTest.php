@@ -44,6 +44,44 @@ class RecordsImportTest extends TestCase
         $this->assertEquals(69.35, (float) $record->costs);
     }
 
+    public function test_import_works_with_actual_excel_column_order_and_multiple_rows(): void
+    {
+        $user = User::factory()->create();
+        $upload = Upload::create([
+            'user_id' => $user->id,
+            'filename' => 'records-import-actual-format.xlsx',
+            'status' => 'pending',
+        ]);
+
+        $filePath = $this->createSpreadsheet([
+            ['ID', 'Medewerker', 'Actie', 'Kosten', 'Uren', 'Notities', 'Upload ID', 'Datum'],
+            ['1', 'Sanne', 'Reparatie', '69,35', '7,3', 'Defect onderdeel gerepareerd', '10', '2024-10-07'],
+            ['2', 'Piet', 'Controle', '458,02', '4,2', 'Algemene controle uitgevoerd', '10', '2024-04-13'],
+        ]);
+
+        $importer = new RecordsImport($upload, $user->id);
+        $count = $importer->import($filePath);
+
+        $this->assertSame(2, $count);
+
+        $records = Record::query()->orderBy('date')->get();
+        $this->assertCount(2, $records);
+
+        $this->assertSame('2024-04-13', $records[0]->date?->format('Y-m-d'));
+        $this->assertSame('Controle', $records[0]->action);
+        $this->assertSame('Piet', $records[0]->worker);
+        $this->assertSame('Algemene controle uitgevoerd', $records[0]->description);
+        $this->assertEquals(4.2, (float) $records[0]->time);
+        $this->assertEquals(458.02, (float) $records[0]->costs);
+
+        $this->assertSame('2024-10-07', $records[1]->date?->format('Y-m-d'));
+        $this->assertSame('Reparatie', $records[1]->action);
+        $this->assertSame('Sanne', $records[1]->worker);
+        $this->assertSame('Defect onderdeel gerepareerd', $records[1]->description);
+        $this->assertEquals(7.3, (float) $records[1]->time);
+        $this->assertEquals(69.35, (float) $records[1]->costs);
+    }
+
     public function test_import_fails_with_clear_error_when_required_columns_are_missing(): void
     {
         $this->expectException(\RuntimeException::class);
