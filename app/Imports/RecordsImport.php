@@ -240,10 +240,10 @@ class RecordsImport
     private function detectColumns(array $headers): array
     {
         $patterns = [
-            'action' => ['actie', 'action'],
+            'action' => ['actie', 'action', 'type'],
             'date' => ['datum', 'date'],
-            'description' => ['omschrijving', 'beschrijving', 'description', 'toelichting', 'info', 'opmerking', 'details', 'note', 'notes', 'notities', 'notitie'],
-            'worker' => ['medewerker', 'worker', 'werknemer', 'employee'],
+            'description' => ['omschrijving', 'beschrijving', 'description', 'toelichting', 'info', 'opmerking', 'details', 'detail', 'note', 'notes', 'notities', 'notitie'],
+            'worker' => ['medewerker', 'medeweker', 'worker', 'werknemer', 'employee', 'naam', 'name'],
             'time' => ['uren', 'time', 'hours', 'duur', 'tijd'],
             'costs' => ['kosten', 'costs', 'bedrag', 'amount', 'prijs', 'tarief'],
         ];
@@ -268,14 +268,23 @@ class RecordsImport
             }
         }
 
-        $fallbackPositions = [
-            'worker' => 1,
-            'action' => 2,
-            'costs' => 3,
-            'time' => 4,
-            'description' => 5,
-            'date' => 7,
-        ];
+        $fallbackPositions = count($headers) >= 8
+            ? [
+                'worker' => 1,
+                'action' => 2,
+                'costs' => 3,
+                'time' => 4,
+                'description' => 5,
+                'date' => 7,
+            ]
+            : [
+                'worker' => 0,
+                'action' => 1,
+                'description' => 2,
+                'date' => 3,
+                'costs' => 4,
+                'time' => 5,
+            ];
 
         foreach ($fallbackPositions as $field => $position) {
             if ($columns[$field] === null && array_key_exists($position, $headers)) {
