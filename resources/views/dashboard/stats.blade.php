@@ -9,7 +9,7 @@
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
     {{-- Totaal acties --}}
-    <a href="{{ route('records.by-action') }}"
+    <a href="{{ route('records.by-action') }}?{{ http_build_query(request()->query()) }}"
         class="stat-card group border border-white/8 bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-blue-500/30 transition">
         <div class="flex items-center justify-between">
             <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Totaal acties</span>
@@ -34,7 +34,7 @@
     </a>
 
     {{-- Totale kosten --}}
-    <a href="{{ route('records.by-cost') }}"
+    <a href="{{ route('records.by-cost') }}?{{ http_build_query(request()->query()) }}"
         class="stat-card group border border-white/8 bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-cyan-500/30 transition">
         <div class="flex items-center justify-between">
             <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Totale kosten</span>
@@ -63,7 +63,7 @@
     </a>
 
     {{-- Gemiddelde duur --}}
-    <a href="{{ route('records.by-duration') }}"
+    <a href="{{ route('records.by-duration') }}?{{ http_build_query(request()->query()) }}"
         class="stat-card group border border-white/8 bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-emerald-500/30 transition">
         <div class="flex items-center justify-between">
             <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Gem. duur</span>
@@ -89,7 +89,7 @@
     </a>
 
     {{-- Medewerkers --}}
-    <a href="{{ route('records.by-employee') }}"
+    <a href="{{ route('records.by-employee') }}?{{ http_build_query(request()->query()) }}"
         class="stat-card group border border-white/8 bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-violet-500/30 transition">
         <div class="flex items-center justify-between">
             <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Medewerkers</span>

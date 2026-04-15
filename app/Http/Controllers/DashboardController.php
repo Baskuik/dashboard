@@ -462,6 +462,7 @@ class DashboardController extends Controller
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
+            'paginatedRecords' => $records,
             'pageTitle' => 'Records per medewerker',
             'pageSubtitle' => 'Alle acties gegroepeerd per medewerker, gesorteerd op datum',
             'search' => $search,
@@ -469,6 +470,10 @@ class DashboardController extends Controller
             'toDate' => $toDate,
             'minCost' => $minCost,
             'maxCost' => $maxCost,
+            'stats' => $this->getStats(),
+            'chartData' => $this->getChartData(),
+            'kostenPerMaand' => $this->getKostenPerMaand(),
+            'selectedWidgets' => Auth::user()->dashboardWidgets()->orderBy('order')->pluck('widget_key')->toArray(),
         ]);
     }
 
@@ -564,6 +569,7 @@ class DashboardController extends Controller
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
+            'paginatedRecords' => $records,
             'pageTitle' => 'Records per actie',
             'pageSubtitle' => 'Alle acties gegroepeerd op actietype, gesorteerd op datum',
             'search' => $search,
@@ -571,6 +577,10 @@ class DashboardController extends Controller
             'toDate' => $toDate,
             'minCost' => $minCost,
             'maxCost' => $maxCost,
+            'stats' => $this->getStats(),
+            'chartData' => $this->getChartData(),
+            'kostenPerMaand' => $this->getKostenPerMaand(),
+            'selectedWidgets' => Auth::user()->dashboardWidgets()->orderBy('order')->pluck('widget_key')->toArray(),
         ]);
     }
 
@@ -660,6 +670,7 @@ class DashboardController extends Controller
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
+            'paginatedRecords' => $records,
             'pageTitle' => 'Records per kosten',
             'pageSubtitle' => 'Medewerkers gerangschikt op totale kosten (hoogste eerst)',
             'search' => $search,
@@ -667,6 +678,10 @@ class DashboardController extends Controller
             'toDate' => $toDate,
             'minCost' => $minCost,
             'maxCost' => $maxCost,
+            'stats' => $this->getStats(),
+            'chartData' => $this->getChartData(),
+            'kostenPerMaand' => $this->getKostenPerMaand(),
+            'selectedWidgets' => Auth::user()->dashboardWidgets()->orderBy('order')->pluck('widget_key')->toArray(),
         ]);
     }
 
@@ -756,6 +771,7 @@ class DashboardController extends Controller
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
+            'paginatedRecords' => $records,
             'pageTitle' => 'Records per duur',
             'pageSubtitle' => 'Medewerkers gerangschikt op totale uren (meeste eerst)',
             'search' => $search,
@@ -763,6 +779,10 @@ class DashboardController extends Controller
             'toDate' => $toDate,
             'minCost' => $minCost,
             'maxCost' => $maxCost,
+            'stats' => $this->getStats(),
+            'chartData' => $this->getChartData(),
+            'kostenPerMaand' => $this->getKostenPerMaand(),
+            'selectedWidgets' => Auth::user()->dashboardWidgets()->orderBy('order')->pluck('widget_key')->toArray(),
         ]);
     }
 }

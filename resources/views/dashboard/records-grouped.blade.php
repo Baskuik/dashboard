@@ -693,8 +693,12 @@
                             console.log('✓ No saved currency, using default EUR');
                         }
 
-                        this.originalMinValue = minInput.value ? parseFloat(minInput.value) : null;
-                        this.originalMaxValue = maxInput.value ? parseFloat(maxInput.value) : null;
+                        // Set original values from the FORM values divided by currentRate to get EUR equivalent
+                        this.originalMinValue = minInput.value ? parseFloat(minInput.value) / this.currentRate : null;
+                        this.originalMaxValue = maxInput.value ? parseFloat(maxInput.value) / this.currentRate : null;
+                        console.log('✓ Set originalMinValue:', this.originalMinValue, 'originalMaxValue:', this
+                            .originalMaxValue);
+
                         this.init();
                         // NOTE: restoreUIState() is called from DOMContentLoaded to ensure all elements are loaded
                     }
@@ -704,51 +708,124 @@
                         const currencyPicker = document.getElementById('currency-picker');
                         const currencyOptions = document.querySelectorAll('.currency-opt');
 
+                        // Update originalMinValue and originalMaxValue whenever the user manually edits the inputs
+                        // Convert displayed value back to EUR before storing
+                        minInput.addEventListener('input', () => {
+                            this.originalMinValue =
+                                minInput.value === '' ? null : parseFloat(minInput.value) / this.currentRate;
+                            console.log('✓ Updated originalMinValue (in EUR):', this.originalMinValue);
+                        });
+
+                        maxInput.addEventListener('input', () => {
+                            this.originalMaxValue =
+                                maxInput.value === '' ? null : parseFloat(maxInput.value) / this.currentRate;
+                            console.log('✓ Updated originalMaxValue (in EUR):', this.originalMaxValue);
+                        });
+
                         currencyBtn.addEventListener('click', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            console.log('Currency button clicked');
                             currencyPicker.classList.toggle('hidden');
                         });
 
                         currencyOptions.forEach(btn => {
                             btn.addEventListener('click', (e) => {
                                 e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Currency option clicked:', btn.dataset.currency);
+
+                                // BEFORE changing currency: save the current displayed values as EUR equivalent
+                                if (minInput.value !== '') {
+                                    this.originalMinValue = parseFloat(minInput.value) / this.currentRate;
+                                    console.log('✓ Before currency change - saved originalMinValue (in EUR):',
+                                        this.originalMinValue);
+                                } else {
+                                    this.originalMinValue = null;
+                                }
+
+                                if (maxInput.value !== '') {
+                                    this.originalMaxValue = parseFloat(maxInput.value) / this.currentRate;
+                                    console.log('✓ Before currency change - saved originalMaxValue (in EUR):',
+                                        this.originalMaxValue);
+                                } else {
+                                    this.originalMaxValue = null;
+                                }
+
+                                // NOW change the currency
+                                const oldCurrency = this.currentCurrency;
                                 this.currentCurrency = btn.dataset.currency;
                                 this.currentRate = parseFloat(btn.dataset.rate);
                                 this.currentSymbol = btn.dataset.symbol;
+                                console.log('✓ Currency changed from', oldCurrency, 'to', this.currentCurrency,
+                                    'rate:', this.currentRate);
+
                                 // Save to localStorage
                                 localStorage.setItem('selectedCurrency',
                                     `${this.currentCurrency}|${this.currentRate}|${this.currentSymbol}`);
                                 console.log('✓ Saved to localStorage:', this.currentCurrency);
+
                                 this.updateUI();
                                 currencyPicker.classList.add('hidden');
                             });
                         });
 
+                        // CRITICAL FIX: Global click handler to close picker when clicking outside
                         document.addEventListener('click', (e) => {
-                            if (!currencyBtn.contains(e.target) && !currencyPicker.contains(e.target)) {
+                            // Check if click was on the button or picker itself
+                            const isOnButton = currencyBtn && currencyBtn.contains(e.target);
+                            const isOnPicker = currencyPicker && currencyPicker.contains(e.target);
+
+                            console.log('Document click detected - isOnButton:', isOnButton, 'isOnPicker:', isOnPicker);
+
+                            // If neither, close the picker
+                            if (!isOnButton && !isOnPicker) {
                                 currencyPicker.classList.add('hidden');
+                                console.log('Closed picker - clicked outside');
                             }
-                        });
+                        }, false);
                     }
 
                     restoreUIState() {
-                        // Update UI to reflect loaded/saved currency without triggering data updates
-                        document.getElementById('currency-symbol').textContent = this.currentSymbol;
-                        document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
-                        document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
+                        // Update UI to reflect loaded/saved currency without triggering dashboard update
+                        console.log('restoreUIState() called, symbol:', this.currentSymbol);
+
+                        try {
+                            document.getElementById('currency-symbol').textContent = this.currentSymbol;
+                            console.log('✓ Updated currency-symbol');
+                        } catch (e) {
+                            console.error('Failed to update currency-symbol:', e);
+                        }
+
+                        try {
+                            document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
+                            console.log('✓ Updated min-currency-symbol');
+                        } catch (e) {
+                            console.error('Failed to update min-currency-symbol:', e);
+                        }
+
+                        try {
+                            document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
+                            console.log('✓ Updated max-currency-symbol');
+                        } catch (e) {
+                            console.error('Failed to update max-currency-symbol:', e);
+                        }
 
                         // Update all currency symbols in tables and group headers
                         document.querySelectorAll('.currency-symbol-table, .group-symbol').forEach(el => {
                             el.textContent = this.currentSymbol;
                         });
 
-                        // Convert and update input values
+                        // Convert from EUR to current currency for display
                         if (this.originalMinValue !== null) {
                             minInput.value = (this.originalMinValue * this.currentRate).toFixed(2);
+                            console.log('✓ Restored minInput:', minInput.value, '(from EUR:', this.originalMinValue, 'rate:',
+                                this.currentRate, ')');
                         }
                         if (this.originalMaxValue !== null) {
                             maxInput.value = (this.originalMaxValue * this.currentRate).toFixed(2);
+                            console.log('✓ Restored maxInput:', maxInput.value, '(from EUR:', this.originalMaxValue, 'rate:',
+                                this.currentRate, ')');
                         }
 
                         // Update all cost displays in grouped records
@@ -776,36 +853,75 @@
                     }
 
                     updateUI() {
-                        console.log('🔄 records-grouped updateUI() CALLED with symbol:', this.currentSymbol, 'rate:', this
-                            .currentRate);
-                        // Update currency symbol in selector
-                        document.getElementById('currency-symbol').textContent = this.currentSymbol;
-                        document.getElementById('min-currency-symbol').textContent = this.currentSymbol;
-                        document.getElementById('max-currency-symbol').textContent = this.currentSymbol;
+                        console.log('🔄 updateUI() CALLED - currency changed, updating display');
+                        console.log('CurrencyConverter.updateUI() called, currency:', this.currentCurrency, 'rate:', this
+                            .currentRate, 'symbol:', this.currentSymbol);
+
+                        try {
+                            const currencySymbol = document.getElementById('currency-symbol');
+                            if (currencySymbol) {
+                                currencySymbol.textContent = this.currentSymbol;
+                                console.log('✓ Updated currency-symbol to:', this.currentSymbol);
+                            } else {
+                                console.error('❌ currency-symbol element not found');
+                            }
+                        } catch (e) {
+                            console.error('Error updating currency-symbol:', e);
+                        }
+
+                        try {
+                            const minSymbol = document.getElementById('min-currency-symbol');
+                            if (minSymbol) {
+                                minSymbol.textContent = this.currentSymbol;
+                                console.log('✓ Updated min-currency-symbol to:', this.currentSymbol);
+                            } else {
+                                console.error('❌ min-currency-symbol element not found');
+                            }
+                        } catch (e) {
+                            console.error('Error updating min-currency-symbol:', e);
+                        }
+
+                        try {
+                            const maxSymbol = document.getElementById('max-currency-symbol');
+                            if (maxSymbol) {
+                                maxSymbol.textContent = this.currentSymbol;
+                                console.log('✓ Updated max-currency-symbol to:', this.currentSymbol);
+                            } else {
+                                console.error('❌ max-currency-symbol element not found');
+                            }
+                        } catch (e) {
+                            console.error('Error updating max-currency-symbol:', e);
+                        }
 
                         // Update all currency symbols in tables and group headers
                         document.querySelectorAll('.currency-symbol-table, .group-symbol').forEach(el => {
                             el.textContent = this.currentSymbol;
                         });
 
-                        // Convert and update input values
-                        try {
-                            if (this.originalMinValue !== null) {
-                                minInput.value = (this.originalMinValue * this.currentRate).toFixed(2);
-                            }
-                            if (this.originalMaxValue !== null) {
-                                minInput.value = (this.originalMaxValue * this.currentRate).toFixed(2);
-                            }
-                        } catch (e) {
-                            console.error('❌ Error updating input values:', e);
+                        // Apply currency conversion: originalValue (in EUR) * newRate
+                        if (this.originalMinValue !== null) {
+                            minInput.value = (this.originalMinValue * this.currentRate).toFixed(2);
+                            console.log('✓ Converted minInput to', this.currentCurrency, ':', minInput.value);
+                        }
+                        if (this.originalMaxValue !== null) {
+                            maxInput.value = (this.originalMaxValue * this.currentRate).toFixed(2);
+                            console.log('✓ Converted maxInput to', this.currentCurrency, ':', maxInput.value);
                         }
 
-                        // Update cost range display
-                        try {
-                            updateCostDisplay();
-                        } catch (e) {
-                            console.error('❌ Error in updateCostDisplay():', e);
+                        updateCostDisplay();
+
+                        const min = minInput.value;
+                        const max = maxInput.value;
+                        let display = '';
+                        if (min && max) {
+                            display =
+                                `${this.currentSymbol}${parseFloat(min).toFixed(2)} – ${this.currentSymbol}${parseFloat(max).toFixed(2)}`;
+                        } else if (min) {
+                            display = `Vanaf ${this.currentSymbol}${parseFloat(min).toFixed(2)}`;
+                        } else if (max) {
+                            display = `Tot ${this.currentSymbol}${parseFloat(max).toFixed(2)}`;
                         }
+                        costDisplay.textContent = display;
 
                         // Update all cost displays in grouped records
                         console.log('About to update [data-cost-original] elements...');
@@ -820,21 +936,16 @@
                         });
                         console.log('✓ Updated all cost elements');
 
-                        // Update cost range display text with current symbol
-                        const costDisplayEl = document.getElementById('cost-range-display');
-                        const min = minInput.value;
-                        const max = maxInput.value;
-                        let display = '';
-
-                        if (min && max) {
-                            display =
-                                `${this.currentSymbol}${parseFloat(min).toFixed(2).replace('.', ',')} – ${this.currentSymbol}${parseFloat(max).toFixed(2).replace('.', ',')}`;
-                        } else if (min) {
-                            display = `Vanaf ${this.currentSymbol}${parseFloat(min).toFixed(2).replace('.', ',')}`;
-                        } else if (max) {
-                            display = `Tot ${this.currentSymbol}${parseFloat(max).toFixed(2).replace('.', ',')}`;
+                        // Sync filters immediately so stat card clicks have current value
+                        if (typeof syncCurrentFilters !== 'undefined') {
+                            syncCurrentFilters();
                         }
-                        costDisplayEl.textContent = display;
+
+                        // Trigger dashboard data update when currency changes
+                        if (typeof updateDashboardData !== 'undefined') {
+                            console.log('Calling updateDashboardData from currency change');
+                            updateDashboardData();
+                        }
                     }
                 }
 
@@ -859,19 +970,6 @@
                 document.addEventListener('DOMContentLoaded', function() {
                     console.log('DOMContentLoaded: Restoring currency UI state');
                     converter.restoreUIState();
-                });
-
-                // Listen to input changes and store original values
-                minInput.addEventListener('input', () => {
-                    if (converter.currentRate === 1.0) {
-                        converter.originalMinValue = minInput.value ? parseFloat(minInput.value) : null;
-                    }
-                });
-
-                maxInput.addEventListener('input', () => {
-                    if (converter.currentRate === 1.0) {
-                        converter.originalMaxValue = maxInput.value ? parseFloat(maxInput.value) : null;
-                    }
                 });
             </script>
         </div>

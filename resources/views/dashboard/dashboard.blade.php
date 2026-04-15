@@ -797,10 +797,11 @@
             }
 
             // Currency & Cost Filter
+            const minInput = document.getElementById('min_cost_input');
+            const maxInput = document.getElementById('max_cost_input');
+            const costDisplay = document.getElementById('cost-range-display');
+
             function updateCostDisplay() {
-                const minInput = document.getElementById('min_cost_input');
-                const maxInput = document.getElementById('max_cost_input');
-                const costDisplay = document.getElementById('cost-range-display');
                 if (!minInput || !maxInput || !costDisplay) return;
 
                 const min = minInput.value;
@@ -836,8 +837,11 @@
                         console.log('✓ No saved currency, using default EUR');
                     }
 
-                    this.originalMinValue = minInput.value ? parseFloat(minInput.value) : null;
-                    this.originalMaxValue = maxInput.value ? parseFloat(maxInput.value) : null;
+                    // CRITICAL: Always store originalMinValue/originalMaxValue in EUR (base currency)
+                    this.originalMinValue = minInput.value ? parseFloat(minInput.value) / this.currentRate : null;
+                    this.originalMaxValue = maxInput.value ? parseFloat(maxInput.value) / this.currentRate : null;
+                    console.log('✓ Set originalMinValue (in EUR):', this.originalMinValue, 'originalMaxValue (in EUR):',
+                        this.originalMaxValue);
                     this.init();
                     // NOTE: restoreUIState() is called from DOMContentLoaded to ensure all elements are loaded
                 }
@@ -861,15 +865,35 @@
                     currencyBtn.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log('Currency button clicked');
                         currencyPicker.classList.toggle('hidden');
                     });
 
                     currencyOptions.forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Currency option clicked:', btn.dataset.currency);
+
+                            // BEFORE changing currency: save the current displayed values as EUR equivalent
+                            if (minInput.value !== '') {
+                                this.originalMinValue = parseFloat(minInput.value) / this.currentRate;
+                            } else {
+                                this.originalMinValue = null;
+                            }
+
+                            if (maxInput.value !== '') {
+                                this.originalMaxValue = parseFloat(maxInput.value) / this.currentRate;
+                            } else {
+                                this.originalMaxValue = null;
+                            }
+
+                            const oldCurrency = this.currentCurrency;
                             this.currentCurrency = btn.dataset.currency;
                             this.currentRate = parseFloat(btn.dataset.rate);
                             this.currentSymbol = btn.dataset.symbol;
+                            console.log('✓ Currency changed from', oldCurrency, 'to', this.currentCurrency);
+
                             // Save to localStorage
                             localStorage.setItem('selectedCurrency',
                                 `${this.currentCurrency}|${this.currentRate}|${this.currentSymbol}`);
@@ -879,11 +903,20 @@
                         });
                     });
 
+                    // CRITICAL FIX: Global click handler to close picker when clicking outside
                     document.addEventListener('click', (e) => {
-                        if (!currencyBtn.contains(e.target) && !currencyPicker.contains(e.target)) {
+                        // Check if click was on the button or picker itself
+                        const isOnButton = currencyBtn && currencyBtn.contains(e.target);
+                        const isOnPicker = currencyPicker && currencyPicker.contains(e.target);
+
+                        console.log('Document click detected - isOnButton:', isOnButton, 'isOnPicker:', isOnPicker);
+
+                        // If neither, close the picker
+                        if (!isOnButton && !isOnPicker) {
                             currencyPicker.classList.add('hidden');
+                            console.log('Closed picker - clicked outside');
                         }
-                    });
+                    }, false);
                 }
 
                 restoreUIState() {
@@ -1008,6 +1041,19 @@
             }
 
             window.currencyConverter = new CurrencyConverter();
+
+            // Listen for storage changes from other tabs or pages
+            window.addEventListener('storage', function(event) {
+                if (event.key === 'selectedCurrency' && window.currencyConverter) {
+                    console.log('📢 Storage event detected: selectedCurrency changed to', event.newValue);
+                    const [currency, rate, symbol] = event.newValue.split('|');
+                    window.currencyConverter.currentCurrency = currency;
+                    window.currencyConverter.currentRate = parseFloat(rate);
+                    window.currencyConverter.currentSymbol = symbol;
+                    console.log('✓ Updated converter from storage event:', currency, 'rate:', rate);
+                    window.currencyConverter.updateUI();
+                }
+            });
         </script>
 
         {{-- Real-time Dashboard Filtering --}}
@@ -1041,14 +1087,14 @@
                     .to_date ||
                     currentFilters.min_cost || currentFilters.max_cost;
 
-                // First: Update UI with correct currency symbols and stat cards (with small delay to ensure DOM is ready)
+                // First: Restore UI state with correct currency and convert input values
+                console.log('DOMContentLoaded: Restoring currency UI state with:', window.currencyConverter.currentCurrency);
+                window.currencyConverter.restoreUIState();
+
+                // Then animate if currency changed
                 if (hasSavedCurrency) {
-                    console.log('Restoring UI state with saved currency:', window.currencyConverter.currentCurrency);
-                    setTimeout(() => {
-                        window.currencyConverter.updateUI();
-                        // Animate AFTER currency is applied
-                        setTimeout(() => initializeCounterAnimations(), 150);
-                    }, 50);
+                    console.log('Animating counter with saved currency:', window.currencyConverter.currentCurrency);
+                    setTimeout(() => initializeCounterAnimations(), 150);
                 } else {
                     // No saved currency (EUR) - animate with small delay
                     setTimeout(() => initializeCounterAnimations(), 200);
@@ -1349,13 +1395,13 @@
             // Update stat cards with new values
             function updateStatCards(stats, currencyInfo) {
                 // Update Totaal acties
-                const totalActionsCard = document.querySelector('[href="{{ route('records.by-action') }}"]');
+                const totalActionsCard = document.querySelector('a[href^="{{ route('records.by-action') }}"]');
                 if (totalActionsCard) {
                     totalActionsCard.querySelector('.mono').textContent = stats.total_actions;
                 }
 
                 // Update Totale kosten - convert EUR to current currency
-                const costCard = document.querySelector('[href="{{ route('records.by-cost') }}"]');
+                const costCard = document.querySelector('a[href^="{{ route('records.by-cost') }}"]');
                 if (costCard) {
                     const convertedCost = parseFloat(stats.total_cost) * currencyInfo.rate;
                     costCard.querySelector('.mono').textContent =
@@ -1363,14 +1409,14 @@
                 }
 
                 // Update Gem. duur
-                const durationCard = document.querySelector('[href="{{ route('records.by-duration') }}"]');
+                const durationCard = document.querySelector('a[href^="{{ route('records.by-duration') }}"]');
                 if (durationCard) {
                     durationCard.querySelector('.mono').textContent =
                         `${parseFloat(stats.avg_duration).toLocaleString('nl-NL')}u`;
                 }
 
                 // Update Medewerkers
-                const employeeCard = document.querySelector('[href="{{ route('records.by-employee') }}"]');
+                const employeeCard = document.querySelector('a[href^="{{ route('records.by-employee') }}"]');
                 if (employeeCard) {
                     employeeCard.querySelector('.mono').textContent = stats.total_employees;
                 }
