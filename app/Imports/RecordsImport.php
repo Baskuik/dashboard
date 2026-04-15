@@ -34,8 +34,33 @@ class RecordsImport
         }
 
         // Eerste rij = headers
-        $headers = array_map(fn($h) => strtolower(trim((string) $h)), $rows[0]);
-        Log::info('RecordsImport headers', ['headers' => $headers]);
+        $rawHeaders = $rows[0];
+        $headers = array_map(fn($h) => $this->normalizeHeader($h), $rawHeaders);
+        $columns = $this->detectColumns($headers);
+
+        Log::info('RecordsImport headers en kolommen gedetecteerd', [
+            'raw_headers' => $rawHeaders,
+            'normalized_headers' => $headers,
+            'detected_columns' => $columns,
+        ]);
+
+        $requiredColumns = ['action', 'date', 'worker', 'time', 'costs'];
+        $missingRequiredColumns = array_values(array_filter(
+            $requiredColumns,
+            fn($column) => $columns[$column] === null
+        ));
+
+        if ($missingRequiredColumns !== []) {
+            Log::error('RecordsImport: verplichte kolommen ontbreken', [
+                'missing_columns' => $missingRequiredColumns,
+                'detected_columns' => $columns,
+                'headers' => $headers,
+            ]);
+
+            throw new \RuntimeException(
+                'Verplichte kolommen ontbreken in Excel: ' . implode(', ', $missingRequiredColumns)
+            );
+        }
 
         $count = 0;
         $skipped = 0;
@@ -48,10 +73,17 @@ class RecordsImport
                 continue;
             }
 
-            $rowData = array_combine($headers, $row);
+            if (count($row) !== count($headers)) {
+                Log::debug('RecordsImport: rij/header lengte mismatch', [
+                    'row_number' => $i + 1,
+                    'header_count' => count($headers),
+                    'row_count' => count($row),
+                    'row' => $row,
+                ]);
+            }
 
-            $action = trim((string) ($rowData['actie'] ?? $rowData['action'] ?? ''));
-            $date = $rowData['datum'] ?? $rowData['date'] ?? null;
+            $action = trim((string) $this->valueAt($row, $columns['action']));
+            $date = $this->valueAt($row, $columns['date']);
 
             // Rijen zonder actie én datum overslaan
             if (empty($action) && empty($date)) {
@@ -69,27 +101,10 @@ class RecordsImport
                 'user_id' => $this->userId,
                 'date' => $this->parseDate($date),
                 'action' => $action,
-                'description' => trim((string) (
-                    $rowData['omschrijving']
-                    ?? $rowData['beschrijving']
-                    ?? $rowData['description']
-                    ?? $rowData['toelichting']
-                    ?? $rowData['info']
-                    ?? $rowData['opmerking']
-                    ?? $rowData['details']
-                    ?? $rowData['note']
-                    ?? $rowData['notes']
-                    ?? ''
-                )),
-                'worker' => trim((string) ($rowData['medewerker'] ?? $rowData['worker'] ?? '')),
-                'time' => $this->parseNumeric($rowData['uren'] ?? $rowData['time'] ?? null),
-                'costs' => $this->parseNumeric(
-                    $rowData['kosten (€)']
-                    ?? $rowData['kosten (â‚¬)']   // encoding fallback
-                    ?? $rowData['kosten']
-                    ?? $rowData['costs']
-                    ?? null
-                ),
+                'description' => trim((string) $this->valueAt($row, $columns['description'])),
+                'worker' => trim((string) $this->valueAt($row, $columns['worker'])),
+                'time' => $this->parseNumeric($this->valueAt($row, $columns['time'])),
+                'costs' => $this->parseNumeric($this->valueAt($row, $columns['costs'])),
             ];
 
             // Valideer record data
@@ -179,5 +194,55 @@ class RecordsImport
         }
 
         return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function normalizeHeader(mixed $value): string
+    {
+        $header = (string) ($value ?? '');
+        $header = preg_replace('/^\xEF\xBB\xBF/', '', $header) ?? $header;
+        $header = str_replace("\xC2\xA0", ' ', $header);
+        $header = mb_strtolower(trim($header));
+        $header = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $header) ?? $header;
+        $header = preg_replace('/\s+/u', ' ', $header) ?? $header;
+
+        return trim($header);
+    }
+
+    private function detectColumns(array $headers): array
+    {
+        $patterns = [
+            'action' => ['actie', 'action'],
+            'date' => ['datum', 'date'],
+            'description' => ['omschrijving', 'beschrijving', 'description', 'toelichting', 'info', 'opmerking', 'details', 'note', 'notes', 'notities', 'notitie'],
+            'worker' => ['medewerker', 'worker', 'werknemer', 'employee'],
+            'time' => ['uren', 'time', 'hours', 'duur', 'tijd'],
+            'costs' => ['kosten', 'costs', 'bedrag', 'amount', 'prijs', 'tarief'],
+        ];
+
+        $columns = [];
+
+        foreach ($patterns as $field => $possibleNames) {
+            $columns[$field] = null;
+
+            foreach ($headers as $index => $header) {
+                foreach ($possibleNames as $name) {
+                    if ($header !== '' && strpos($header, $name) !== false) {
+                        $columns[$field] = $index;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        return $columns;
+    }
+
+    private function valueAt(array $row, ?int $index): mixed
+    {
+        if ($index === null) {
+            return null;
+        }
+
+        return $row[$index] ?? null;
     }
 }
