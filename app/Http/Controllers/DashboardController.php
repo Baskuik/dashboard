@@ -225,7 +225,19 @@ class DashboardController extends Controller
             ->toArray();
 
         // Paginated records for display
-        $sortedRecords = $records->sortByDesc('date')->values();
+        $sortBy = $request->get('sort_by', 'date');
+        $sortDir = $request->get('sort_dir', 'desc');
+
+        // Validate sort direction
+        $sortDir = in_array($sortDir, ['asc', 'desc']) ? $sortDir : 'desc';
+
+        // Sort by the requested column
+        if ($sortDir === 'asc') {
+            $sortedRecords = $records->sortBy($sortBy)->values();
+        } else {
+            $sortedRecords = $records->sortByDesc($sortBy)->values();
+        }
+
         $perPage = 25;
         $page = $request->get('page', 1);
         $paginatedRecords = new LengthAwarePaginator(
@@ -375,11 +387,10 @@ class DashboardController extends Controller
         $toDate = $request->get('to_date');
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
+        $sortBy = $request->get('sort_by', 'worker');
+        $sortDir = $request->get('sort_dir', 'asc');
 
-        $records = Record::where('user_id', Auth::id())
-            ->orderBy('worker')
-            ->orderByDesc('date')
-            ->get();
+        $records = Record::where('user_id', Auth::id())->get();
 
         // Filter by search term if provided
         if ($search) {
@@ -413,7 +424,41 @@ class DashboardController extends Controller
             });
         }
 
+        // Group records FIRST, then sort within groups
         $groups = $records->groupBy('worker');
+
+        // Sort groups based on sort_by parameter
+        if ($sortBy === 'worker') {
+            // Sort groups by worker name
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortKeys();
+            } else {
+                $groups = $groups->sortKeys()->reverse();
+            }
+        } else {
+            // Sort groups by aggregate of the sort field
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortBy(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->min('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->first()?->{$sortBy};
+                });
+            } else {
+                $groups = $groups->sortByDesc(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->max('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->last()?->{$sortBy};
+                });
+            }
+        }
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
@@ -438,11 +483,10 @@ class DashboardController extends Controller
         $toDate = $request->get('to_date');
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
+        $sortBy = $request->get('sort_by', 'action');
+        $sortDir = $request->get('sort_dir', 'asc');
 
-        $records = Record::where('user_id', Auth::id())
-            ->orderBy('action')
-            ->orderByDesc('date')
-            ->get();
+        $records = Record::where('user_id', Auth::id())->get();
 
         // Filter by search term if provided
         if ($search) {
@@ -476,7 +520,47 @@ class DashboardController extends Controller
             });
         }
 
+        // Apply sorting
+        if ($sortDir === 'asc') {
+            $records = $records->sortBy($sortBy)->values();
+        } else {
+            $records = $records->sortByDesc($sortBy)->values();
+        }
+
         $groups = $records->groupBy('action');
+
+        // Sort groups based on sort_by parameter
+        if ($sortBy === 'action') {
+            // Sort groups by action name
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortKeys();
+            } else {
+                $groups = $groups->sortKeys()->reverse();
+            }
+        } else {
+            // Sort groups by aggregate of the sort field
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortBy(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->min('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->first()?->{$sortBy};
+                });
+            } else {
+                $groups = $groups->sortByDesc(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->max('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->last()?->{$sortBy};
+                });
+            }
+        }
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
@@ -501,10 +585,10 @@ class DashboardController extends Controller
         $toDate = $request->get('to_date');
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
+        $sortBy = $request->get('sort_by', 'costs');
+        $sortDir = $request->get('sort_dir', 'desc');
 
-        $records = Record::where('user_id', Auth::id())
-            ->orderByDesc('costs')
-            ->get();
+        $records = Record::where('user_id', Auth::id())->get();
 
         // Filter by search term if provided
         if ($search) {
@@ -538,10 +622,41 @@ class DashboardController extends Controller
             });
         }
 
+        // Group records FIRST, then sort within groups
         $groups = $records->groupBy('worker');
 
-        // Sort groups by their total costs descending
-        $groups = $groups->sortByDesc(fn($recs) => $recs->sum('costs'));
+        // Sort groups based on sort_by parameter
+        if ($sortBy === 'worker') {
+            // Sort groups by worker name
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortKeys();
+            } else {
+                $groups = $groups->sortKeys()->reverse();
+            }
+        } else {
+            // Sort groups by aggregate of the sort field
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortBy(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->min('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->first()?->{$sortBy};
+                });
+            } else {
+                $groups = $groups->sortByDesc(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->max('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->last()?->{$sortBy};
+                });
+            }
+        }
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
@@ -566,10 +681,10 @@ class DashboardController extends Controller
         $toDate = $request->get('to_date');
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
+        $sortBy = $request->get('sort_by', 'time');
+        $sortDir = $request->get('sort_dir', 'desc');
 
-        $records = Record::where('user_id', Auth::id())
-            ->orderByDesc('time')
-            ->get();
+        $records = Record::where('user_id', Auth::id())->get();
 
         // Filter by search term if provided
         if ($search) {
@@ -603,9 +718,41 @@ class DashboardController extends Controller
             });
         }
 
+        // Group records FIRST, then sort within groups
         $groups = $records->groupBy('worker');
 
-        $groups = $groups->sortByDesc(fn($recs) => $recs->sum('time'));
+        // Sort groups based on sort_by parameter
+        if ($sortBy === 'worker') {
+            // Sort groups by worker name
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortKeys();
+            } else {
+                $groups = $groups->sortKeys()->reverse();
+            }
+        } else {
+            // Sort groups by aggregate of the sort field
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortBy(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->min('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->first()?->{$sortBy};
+                });
+            } else {
+                $groups = $groups->sortByDesc(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->max('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->last()?->{$sortBy};
+                });
+            }
+        }
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,

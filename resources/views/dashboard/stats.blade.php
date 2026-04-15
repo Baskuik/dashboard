@@ -47,8 +47,11 @@
             </div>
         </div>
         <div>
-            <p class="text-3xl font-semibold text-white mono">
-                €&nbsp;{{ number_format($stats['total_cost'] ?? 0, 0, ',', '.') }}</p>
+            <p id="stat-total-cost" class="text-3xl font-semibold text-white mono"
+                data-value="{{ $stats['total_cost'] ?? 0 }}">
+                <span class="currency-symbol">€</span>&nbsp;<span
+                    class="currency-value">{{ number_format($stats['total_cost'] ?? 0, 0, ',', '.') }}</span>
+            </p>
             <p class="text-xs text-gray-600 mt-1">totale uitgaven</p>
         </div>
         <span class="text-xs text-cyan-400 group-hover:text-cyan-300 transition flex items-center gap-1">

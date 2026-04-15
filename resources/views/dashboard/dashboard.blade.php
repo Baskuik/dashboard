@@ -1006,6 +1006,18 @@
                     }
                     costDisplay.textContent = display;
 
+                    // Update stat card values with converted amounts (for animating in correct currency)
+                    document.querySelectorAll('[data-value]').forEach(el => {
+                        const euroValue = parseFloat(el.dataset.value);
+                        const convertedValue = Math.round(euroValue * this.currentRate);
+                        const valueSpan = el.querySelector('.currency-value');
+                        if (valueSpan) {
+                            console.log('✓ Updated stat card value from', euroValue, 'to', convertedValue,
+                                'with rate', this.currentRate);
+                            valueSpan.textContent = convertedValue.toLocaleString('nl-NL');
+                        }
+                    });
+
                     // Sync filters immediately so stat card clicks have current value
                     if (typeof syncCurrentFilters !== 'undefined') {
                         syncCurrentFilters();
@@ -1045,7 +1057,7 @@
 
             // Initialize dashboard on page load
             document.addEventListener('DOMContentLoaded', function() {
-                // Check if saved currency is different from EUR
+                // Check if saved currency is different from EUR (covers ALL non-EUR currencies)
                 const hasSavedCurrency = window.currencyConverter.currentCurrency !== 'EUR';
 
                 // If there are any active filters, update the dashboard data
@@ -1058,32 +1070,38 @@
                     console.log('Restoring UI state with saved currency:', window.currencyConverter.currentCurrency);
                     setTimeout(() => {
                         window.currencyConverter.updateUI();
+                        // Animate AFTER currency is applied
+                        setTimeout(() => initializeCounterAnimations(), 150);
                     }, 50);
+                } else {
+                    // No saved currency (EUR) - animate with small delay
+                    setTimeout(() => initializeCounterAnimations(), 200);
                 }
 
-                // Then: Update dashboard data if there are active filters OR if a non-EUR currency is saved
-                if (hasActiveFilters || hasSavedCurrency) {
-                    console.log('Triggering updateDashboardData - hasSavedCurrency:', hasSavedCurrency,
-                        'hasActiveFilters:', hasActiveFilters);
+                // Then: Update dashboard data if there are active filters OR if ANY non-EUR currency is saved
+                if (hasActiveFilters) {
+                    console.log('Triggering updateDashboardData - hasActiveFilters:', hasActiveFilters);
                     // Small delay to ensure DOM is ready
+                    // Animation will be triggered in the .then() callback after data is loaded
                     setTimeout(() => updateDashboardData(), 100);
                 }
 
                 // Initialize stat card handlers
                 initStatCardHandlers();
 
-                // Animate number counters (for stats)
-                // Bewaar prefix (bv. "€ ") en suffix (bv. "u") tijdens de animatie
-                function animateValue(element, start, end, duration, opts = {}) {
+                // Animate number counters (for stats) - alle tegelijk met same startTime
+                function animateValue(element, start, end, duration, opts = {}, startTime) {
                     const prefix = opts.prefix || '';
                     const suffix = opts.suffix || '';
-                    let startTimestamp = null;
                     const step = (timestamp) => {
-                        if (!startTimestamp) startTimestamp = timestamp;
-                        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                        const value = Math.floor(progress * (end - start) + start);
+                        const elapsed = timestamp - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        // Ease-out cubic voor smooth animation
+                        const eased = 1 - Math.pow(1 - progress, 3);
+                        const value = Math.floor(eased * (end - start) + start);
                         element.textContent = `${prefix}${value.toLocaleString('nl-NL')}${suffix}`;
-                        if (progress < 1) {
+                        // Continue animating tot duration is bereikt
+                        if (elapsed < duration) {
                             window.requestAnimationFrame(step);
                         }
                     };
@@ -1091,21 +1109,81 @@
                 }
 
                 function initializeCounterAnimations() {
-                    // Pas de animatie alleen toe als we een getal vinden; behoud prefix/suffix
+                    const animationData = [];
+                    const duration = 1500;
+
+                    // Verzamel eerst alle animaties die moeten gebeuren
                     document.querySelectorAll('[class*="stat-card"] .mono').forEach(element => {
+                        // Kostenelementen met data-value: gebruik de al-geladen currency rate
+                        if (element.dataset.value !== undefined) {
+                            const euroValue = parseFloat(element.dataset.value);
+                            if (isNaN(euroValue) || euroValue <= 0) return;
+
+                            const rate = window.currencyConverter.currentRate;
+                            const symbol = window.currencyConverter.currentSymbol;
+                            const target = Math.round(euroValue * rate);
+
+                            const symbolSpan = element.querySelector('.currency-symbol');
+                            const valueSpan = element.querySelector('.currency-value');
+
+                            if (symbolSpan) symbolSpan.textContent = symbol;
+                            if (valueSpan) {
+                                animationData.push({
+                                    element: valueSpan,
+                                    start: 0,
+                                    end: target,
+                                    prefix: '',
+                                    suffix: ''
+                                });
+                            }
+                            return;
+                        }
+
+                        // Overige elementen (totaal acties, medewerkers, gem. duur): bestaand gedrag
                         const raw = element.textContent.trim();
-                        // Match: [prefix][number][suffix], waarbij prefix/suffix geen cijfers zijn
                         const m = raw.match(/^(\D*?)[\s\u00A0]*([\d\.\,]+)[\s\u00A0]*(\D*)$/);
                         if (!m) return;
                         const [, prefix, numberPart, suffix] = m;
                         const number = parseInt(numberPart.replace(/[^\d]/g, ''), 10);
                         if (!isNaN(number) && number > 0) {
-                            animateValue(element, 0, number, 1000, {
+                            animationData.push({
+                                element,
+                                start: 0,
+                                end: number,
                                 prefix: prefix || '',
                                 suffix: suffix || ''
                             });
                         }
                     });
+
+                    // Start alle animaties in ONE master loop
+                    if (animationData.length > 0) {
+                        let animationStartTime = null;
+
+                        const masterStep = (timestamp) => {
+                            if (animationStartTime === null) {
+                                animationStartTime = timestamp;
+                            }
+
+                            const elapsed = timestamp - animationStartTime;
+                            const progress = Math.min(elapsed / duration, 1);
+                            const eased = 1 - Math.pow(1 - progress, 3);
+
+                            // Update ALL elements in THIS frame
+                            animationData.forEach(data => {
+                                const value = Math.floor(eased * (data.end - data.start) + data.start);
+                                data.element.textContent =
+                                    `${data.prefix}${value.toLocaleString('nl-NL')}${data.suffix}`;
+                            });
+
+                            // Continue if not finished
+                            if (elapsed < duration) {
+                                window.requestAnimationFrame(masterStep);
+                            }
+                        };
+
+                        window.requestAnimationFrame(masterStep);
+                    }
                 }
 
                 // Initialize counter animations AFTER all updates (with sufficient delay for currency conversion)

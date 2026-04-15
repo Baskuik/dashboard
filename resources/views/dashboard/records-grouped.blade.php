@@ -876,8 +876,83 @@
             </script>
         </div>
 
+        @php
+            // Per-group client-side sorting: no URL manipulation needed.
+            // Each group table gets a unique ID and sort state tracked in JS.
+        @endphp
+
+        <script>
+            // Per-group sort state: { tableId: { field: 'date', dir: 'desc' } }
+            const groupSortState = {};
+
+            function sortGroup(tableId, field) {
+                const state = groupSortState[tableId] || {
+                    field: 'date',
+                    dir: 'desc'
+                };
+
+                // Toggle direction if same field, otherwise default to asc
+                let newDir;
+                if (state.field === field) {
+                    newDir = state.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    newDir = 'asc';
+                }
+
+                groupSortState[tableId] = {
+                    field,
+                    dir: newDir
+                };
+
+                const table = document.getElementById(tableId);
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                rows.sort((a, b) => {
+                    const aVal = a.dataset['sort_' + field] ?? a.querySelector(`[data-field="${field}"]`)?.dataset
+                        .value ?? '';
+                    const bVal = b.dataset['sort_' + field] ?? b.querySelector(`[data-field="${field}"]`)?.dataset
+                        .value ?? '';
+
+                    // Numeric comparison for time/costs
+                    const aNum = parseFloat(aVal);
+                    const bNum = parseFloat(bVal);
+                    let cmp;
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        cmp = aNum - bNum;
+                    } else {
+                        cmp = aVal.localeCompare(bVal, 'nl');
+                    }
+
+                    return newDir === 'asc' ? cmp : -cmp;
+                });
+
+                rows.forEach(row => tbody.appendChild(row));
+
+                // Update header icons for this table only
+                table.querySelectorAll('th [data-sort-field]').forEach(btn => {
+                    const btnField = btn.dataset.sortField;
+                    const icon = btn.querySelector('.sort-icon');
+                    btn.classList.toggle('text-white', btnField === field);
+                    btn.classList.toggle('text-gray-600', btnField !== field);
+                    if (icon) {
+                        icon.style.transform = (btnField === field && newDir === 'asc') ? 'rotate(180deg)' : '';
+                        icon.style.opacity = btnField === field ? '1' : '0.4';
+                    }
+                });
+            }
+        </script>
+
         {{-- Grouped records --}}
+        @php
+            $sortHeaderSvg =
+                '<svg class="sort-icon w-3 h-3" style="opacity:0.4;transition:transform 0.2s,opacity 0.2s" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>';
+        @endphp
+
         @forelse($groups as $groupName => $records)
+            @php
+                $tableId = 'table-' . Str::slug($groupName);
+            @endphp
             <div class="border border-white/8 bg-[#131928] rounded-xl p-5 mb-4">
 
                 {{-- Group header --}}
@@ -905,32 +980,68 @@
 
                 {{-- Records table --}}
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table id="{{ $tableId }}" class="w-full text-sm">
                         <thead>
                             <tr class="border-b border-white/[0.04]">
                                 <th
                                     class="pb-2 pr-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                    Datum</th>
+                                    <button type="button" data-sort-field="date"
+                                        onclick="sortGroup('{{ $tableId }}', 'date')"
+                                        class="flex items-center gap-1 hover:text-gray-400 transition cursor-pointer">
+                                        Datum {!! $sortHeaderSvg !!}
+                                    </button>
+                                </th>
                                 <th
                                     class="pb-2 pr-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                    Actie</th>
+                                    <button type="button" data-sort-field="action"
+                                        onclick="sortGroup('{{ $tableId }}', 'action')"
+                                        class="flex items-center gap-1 hover:text-gray-400 transition cursor-pointer">
+                                        Actie {!! $sortHeaderSvg !!}
+                                    </button>
+                                </th>
                                 <th
                                     class="pb-2 pr-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                    Omschrijving</th>
+                                    <button type="button" data-sort-field="description"
+                                        onclick="sortGroup('{{ $tableId }}', 'description')"
+                                        class="flex items-center gap-1 hover:text-gray-400 transition cursor-pointer">
+                                        Omschrijving {!! $sortHeaderSvg !!}
+                                    </button>
+                                </th>
                                 <th
                                     class="pb-2 pr-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                    Medewerker</th>
+                                    <button type="button" data-sort-field="worker"
+                                        onclick="sortGroup('{{ $tableId }}', 'worker')"
+                                        class="flex items-center gap-1 hover:text-gray-400 transition cursor-pointer">
+                                        Medewerker {!! $sortHeaderSvg !!}
+                                    </button>
+                                </th>
                                 <th
                                     class="pb-2 pr-4 text-right text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                    Uren</th>
+                                    <button type="button" data-sort-field="time"
+                                        onclick="sortGroup('{{ $tableId }}', 'time')"
+                                        class="flex items-center justify-end gap-1 hover:text-gray-400 transition cursor-pointer w-full">
+                                        Uren {!! $sortHeaderSvg !!}
+                                    </button>
+                                </th>
                                 <th
                                     class="pb-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                    Kosten</th>
+                                    <button type="button" data-sort-field="costs"
+                                        onclick="sortGroup('{{ $tableId }}', 'costs')"
+                                        class="flex items-center justify-end gap-1 hover:text-gray-400 transition cursor-pointer w-full">
+                                        Kosten {!! $sortHeaderSvg !!}
+                                    </button>
+                                </th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-white/[0.03]">
-                            @foreach ($records as $record)
-                                <tr class="hover:bg-white/[0.02] transition">
+                            @foreach ($records->sortByDesc('date')->values() as $record)
+                                <tr class="hover:bg-white/[0.02] transition"
+                                    data-sort_date="{{ $record->date ?? '' }}"
+                                    data-sort_action="{{ $record->action ?? '' }}"
+                                    data-sort_description="{{ $record->description ?? '' }}"
+                                    data-sort_worker="{{ $record->worker ?? '' }}"
+                                    data-sort_time="{{ $record->time ?? 0 }}"
+                                    data-sort_costs="{{ $record->costs ?? 0 }}">
                                     <td class="py-2.5 pr-4 text-gray-400 mono whitespace-nowrap text-xs">
                                         {{ $record->date ? \Carbon\Carbon::parse($record->date)->format('d-m-Y') : '–' }}
                                     </td>
