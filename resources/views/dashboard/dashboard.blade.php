@@ -790,18 +790,19 @@
             new DatePicker('from-date-btn', 'from-calendar', 'from-date-display', 'from_date_hidden');
             new DatePicker('to-date-btn', 'to-calendar', 'to-date-display', 'to_date_hidden');
 
-            // Currency & Cost Filter
-            const minInput = document.getElementById('min_cost_input');
-            const maxInput = document.getElementById('max_cost_input');
-            const costDisplay = document.getElementById('cost-range-display');
-
             // Initialize stat card handlers (click handlers for stat cards)
             function initStatCardHandlers() {
                 // This function initializes any event handlers on stat cards
                 // Currently a placeholder but can be expanded for stat card interactions
             }
 
+            // Currency & Cost Filter
             function updateCostDisplay() {
+                const minInput = document.getElementById('min_cost_input');
+                const maxInput = document.getElementById('max_cost_input');
+                const costDisplay = document.getElementById('cost-range-display');
+                if (!minInput || !maxInput || !costDisplay) return;
+
                 const min = minInput.value;
                 const max = maxInput.value;
                 const symbol = window.currencyConverter ? window.currencyConverter.currentSymbol : '€';
@@ -815,31 +816,6 @@
                 }
                 costDisplay.textContent = display;
             }
-
-            let costTimeout;
-            minInput.addEventListener('input', function() {
-                clearTimeout(costTimeout);
-                updateCostDisplay();
-                // Sync filters immediately so stat card clicks have current value
-                syncCurrentFilters();
-                costTimeout = setTimeout(() => {
-                    if (typeof updateDashboardData !== 'undefined') {
-                        updateDashboardData();
-                    }
-                }, 500);
-            });
-            maxInput.addEventListener('input', function() {
-                clearTimeout(costTimeout);
-                updateCostDisplay();
-                // Sync filters immediately so stat card clicks have current value
-                syncCurrentFilters();
-                costTimeout = setTimeout(() => {
-                    if (typeof updateDashboardData !== 'undefined') {
-                        updateDashboardData();
-                    }
-                }, 500);
-            });
-            updateCostDisplay();
 
             // Currency Converter
             class CurrencyConverter {
@@ -1088,6 +1064,8 @@
 
                 // Initialize stat card handlers
                 initStatCardHandlers();
+                // Update stat card links with current filters
+                updateStatCardLinks();
 
                 // Animate number counters (for stats) - alle tegelijk met same startTime
                 function animateValue(element, start, end, duration, opts = {}, startTime) {
@@ -1188,32 +1166,53 @@
 
                 // Initialize counter animations AFTER all updates (with sufficient delay for currency conversion)
                 setTimeout(() => initializeCounterAnimations(), 200);
-            });
 
-            // Handle filter form submission via AJAX
-            document.getElementById('dashboard-filter-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                updateDashboardData();
-            });
+                // Handle filter form submission via AJAX
+                const dashboardFilterForm = document.getElementById('dashboard-filter-form');
+                if (dashboardFilterForm) {
+                    dashboardFilterForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        syncCurrentFilters();
+                        updateDashboardData();
+                    });
+                }
 
-            // Update on input changes (debounced for search)
-            const searchInput = document.querySelector('input[name="search"]');
-            let searchTimeout;
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                // Sync filters immediately so stat card clicks have current value
-                syncCurrentFilters();
-                searchTimeout = setTimeout(() => updateDashboardData(), 500);
-            });
+                // Update on input changes (debounced for search)
+                const searchInput = document.querySelector('input[name="search"]');
+                let searchTimeout;
+                if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(searchTimeout);
+                        // Sync filters immediately so stat card clicks have current value
+                        syncCurrentFilters();
+                        searchTimeout = setTimeout(() => updateDashboardData(), 500);
+                    });
+                }
 
-            // Sync filters when cost inputs change
-            minInput.addEventListener('change', function() {
-                syncCurrentFilters();
-                updateDashboardData();
-            });
-            maxInput.addEventListener('change', function() {
-                syncCurrentFilters();
-                updateDashboardData();
+                // Sync filters when cost inputs change
+                const minInput = document.getElementById('min_cost_input');
+                const maxInput = document.getElementById('max_cost_input');
+                if (minInput) {
+                    minInput.addEventListener('input', function() {
+                        updateCostDisplay();
+                        syncCurrentFilters();
+                        // Debounce the dashboard update
+                        clearTimeout(window.costFilterTimeout);
+                        window.costFilterTimeout = setTimeout(() => updateDashboardData(), 500);
+                    });
+                }
+                if (maxInput) {
+                    maxInput.addEventListener('input', function() {
+                        updateCostDisplay();
+                        syncCurrentFilters();
+                        // Debounce the dashboard update
+                        clearTimeout(window.costFilterTimeout);
+                        window.costFilterTimeout = setTimeout(() => updateDashboardData(), 500);
+                    });
+                }
+
+                // Initialize cost display on page load
+                updateCostDisplay();
             });
 
             // Helper to get currency info from the converter
@@ -1256,6 +1255,42 @@
                     currency: currencyInfo.currency,
                     currency_rate: currencyInfo.rate
                 };
+
+                updateStatCardLinks();
+            }
+
+            // Update stat card links to carry the current filter params
+            function updateStatCardLinks() {
+                const params = new URLSearchParams();
+                if (currentFilters.search) params.append('search', currentFilters.search);
+                if (currentFilters.from_date) params.append('from_date', currentFilters.from_date);
+                if (currentFilters.to_date) params.append('to_date', currentFilters.to_date);
+                if (currentFilters.min_cost) params.append('min_cost', currentFilters.min_cost);
+                if (currentFilters.max_cost) params.append('max_cost', currentFilters.max_cost);
+
+                const qs = params.toString();
+                console.log('updateStatCardLinks called with filters:', currentFilters, 'querystring:', qs);
+
+                const recordRoutes = [
+                    '{{ route('records.by-action') }}',
+                    '{{ route('records.by-cost') }}',
+                    '{{ route('records.by-duration') }}',
+                    '{{ route('records.by-employee') }}',
+                ];
+
+                console.log('Record routes:', recordRoutes);
+
+                let updatedCount = 0;
+                document.querySelectorAll('a[href]').forEach(link => {
+                    const base = link.getAttribute('href').split('?')[0];
+                    if (recordRoutes.includes(base)) {
+                        const newHref = qs ? `${base}?${qs}` : base;
+                        link.setAttribute('href', newHref);
+                        console.log('Updated link from', base, 'to', newHref);
+                        updatedCount++;
+                    }
+                });
+                console.log('Total links updated:', updatedCount);
             }
 
             // Main function to fetch and update dashboard data
@@ -1297,6 +1332,8 @@
                         updateStatCards(data.stats, currencyInfo);
                         updateCharts(data.charts, data.kostenPerMaand, currencyInfo);
                         updateCostDisplay();
+                        // Update stat card links with current filters after updating cards
+                        updateStatCardLinks();
                         // Re-initialize stat card handlers after updating
                         initStatCardHandlers();
                         // NOW start counter animations — DOM has correct currency values
