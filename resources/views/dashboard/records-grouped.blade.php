@@ -914,14 +914,21 @@
                     const bVal = b.dataset['sort_' + field] ?? b.querySelector(`[data-field="${field}"]`)?.dataset
                         .value ?? '';
 
-                    // Numeric comparison for time/costs
-                    const aNum = parseFloat(aVal);
-                    const bNum = parseFloat(bVal);
                     let cmp;
-                    if (!isNaN(aNum) && !isNaN(bNum)) {
-                        cmp = aNum - bNum;
+                    if (field === 'date') {
+                        // ISO datums (YYYY-MM-DD) correct vergelijken via Date object
+                        const aTime = new Date(aVal).getTime();
+                        const bTime = new Date(bVal).getTime();
+                        cmp = (!isNaN(aTime) && !isNaN(bTime)) ? aTime - bTime : aVal.localeCompare(bVal, 'nl');
                     } else {
-                        cmp = aVal.localeCompare(bVal, 'nl');
+                        // Numeriek voor uren/kosten, tekst voor actie/omschrijving/medewerker
+                        const aNum = parseFloat(aVal);
+                        const bNum = parseFloat(bVal);
+                        if (!isNaN(aNum) && !isNaN(bNum)) {
+                            cmp = aNum - bNum;
+                        } else {
+                            cmp = aVal.localeCompare(bVal, 'nl');
+                        }
                     }
 
                     return newDir === 'asc' ? cmp : -cmp;
