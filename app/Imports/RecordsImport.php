@@ -5,8 +5,8 @@ namespace App\Imports;
 use App\Models\Record;
 use App\Models\Upload;
 use Carbon\Carbon;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Throwable;
@@ -16,8 +16,7 @@ class RecordsImport
     public function __construct(
         private Upload $upload,
         private int $userId
-    ) {
-    }
+    ) {}
 
     public function import(string $filePath): int
     {
@@ -26,7 +25,7 @@ class RecordsImport
             'file_exists' => file_exists($filePath),
         ]);
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             throw new \RuntimeException("Importbestand niet gevonden: {$filePath}");
         }
 
@@ -44,11 +43,12 @@ class RecordsImport
 
         if (empty($rows)) {
             Log::warning('RecordsImport: bestand is leeg', ['filePath' => $filePath]);
+
             return 0;
         }
 
         $rawHeaders = $rows[0];
-        $headers = array_map(fn($header) => $this->normalizeHeader($header), $rawHeaders);
+        $headers = array_map(fn ($header) => $this->normalizeHeader($header), $rawHeaders);
         $columns = $this->detectColumns($headers);
 
         Log::info('RecordsImport: headers en kolomposities gedetecteerd', [
@@ -60,7 +60,7 @@ class RecordsImport
         $requiredColumns = ['worker', 'action', 'costs', 'time', 'date'];
         $missingRequiredColumns = array_values(array_filter(
             $requiredColumns,
-            fn($column) => $columns[$column] === null
+            fn ($column) => $columns[$column] === null
         ));
 
         if ($missingRequiredColumns !== []) {
@@ -71,7 +71,7 @@ class RecordsImport
             ]);
 
             throw new \RuntimeException(
-                'Verplichte kolommen ontbreken in Excel: ' . implode(', ', $missingRequiredColumns)
+                'Verplichte kolommen ontbreken in Excel: '.implode(', ', $missingRequiredColumns)
             );
         }
 
@@ -82,7 +82,7 @@ class RecordsImport
             $row = $rows[$index];
             $rowNumber = $index + 1;
 
-            if (!$this->rowHasContent($row)) {
+            if (! $this->rowHasContent($row)) {
                 continue;
             }
 
@@ -164,8 +164,9 @@ class RecordsImport
 
     private function parseDate(mixed $value): ?string
     {
-        if ($value === null || $value === '')
+        if ($value === null || $value === '') {
             return null;
+        }
 
         if (is_numeric($value)) {
             try {
@@ -184,11 +185,13 @@ class RecordsImport
 
     private function parseNumeric(mixed $value): ?float
     {
-        if ($value === null || $value === '')
+        if ($value === null || $value === '') {
             return null;
+        }
 
-        if (is_numeric($value))
+        if (is_numeric($value)) {
             return (float) $value;
+        }
 
         $value = trim((string) $value);
 
@@ -294,9 +297,9 @@ class RecordsImport
 
     private function rowHasContent(array $row): bool
     {
-        return !empty(array_filter(
+        return ! empty(array_filter(
             $row,
-            fn($value) => $value !== null && trim((string) $value) !== ''
+            fn ($value) => $value !== null && trim((string) $value) !== ''
         ));
     }
 }

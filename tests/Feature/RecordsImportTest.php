@@ -105,15 +105,15 @@ class RecordsImportTest extends TestCase
 
     private function createSpreadsheet(array $rows): string
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         foreach ($rows as $rowIndex => $row) {
-            $sheet->fromArray($row, null, 'A' . ($rowIndex + 1));
+            $sheet->fromArray($row, null, 'A'.($rowIndex + 1));
         }
 
         $filePath = tempnam(sys_get_temp_dir(), 'records-import-test-');
-        $xlsxPath = $filePath . '.xlsx';
+        $xlsxPath = $filePath.'.xlsx';
         $writer = new Xlsx($spreadsheet);
         $writer->save($xlsxPath);
         @unlink($filePath);
