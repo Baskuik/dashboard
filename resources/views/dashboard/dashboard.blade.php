@@ -1072,6 +1072,42 @@
                 // Initialize stat card handlers
                 initStatCardHandlers();
 
+                // Animate number counters (for stats)
+                // Bewaar prefix (bv. "€ ") en suffix (bv. "u") tijdens de animatie
+                function animateValue(element, start, end, duration, opts = {}) {
+                    const prefix = opts.prefix || '';
+                    const suffix = opts.suffix || '';
+                    let startTimestamp = null;
+                    const step = (timestamp) => {
+                        if (!startTimestamp) startTimestamp = timestamp;
+                        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                        const value = Math.floor(progress * (end - start) + start);
+                        element.textContent = `${prefix}${value.toLocaleString('nl-NL')}${suffix}`;
+                        if (progress < 1) {
+                            window.requestAnimationFrame(step);
+                        }
+                    };
+                    window.requestAnimationFrame(step);
+                }
+
+                function initializeCounterAnimations() {
+                    // Pas de animatie alleen toe als we een getal vinden; behoud prefix/suffix
+                    document.querySelectorAll('[class*="stat-card"] .mono').forEach(element => {
+                        const raw = element.textContent.trim();
+                        // Match: [prefix][number][suffix], waarbij prefix/suffix geen cijfers zijn
+                        const m = raw.match(/^(\D*?)[\s\u00A0]*([\d\.\,]+)[\s\u00A0]*(\D*)$/);
+                        if (!m) return;
+                        const [, prefix, numberPart, suffix] = m;
+                        const number = parseInt(numberPart.replace(/[^\d]/g, ''), 10);
+                        if (!isNaN(number) && number > 0) {
+                            animateValue(element, 0, number, 1000, {
+                                prefix: prefix || '',
+                                suffix: suffix || ''
+                            });
+                        }
+                    });
+                }
+
                 // Initialize counter animations AFTER all updates (with sufficient delay for currency conversion)
                 setTimeout(() => initializeCounterAnimations(), 200);
             });
@@ -1183,6 +1219,8 @@
                         updateCostDisplay();
                         // Re-initialize stat card handlers after updating
                         initStatCardHandlers();
+                        // NOW start counter animations — DOM has correct currency values
+                        initializeCounterAnimations();
                     })
                     .catch(error => {
                         if (error.name !== 'AbortError') {
@@ -1402,41 +1440,7 @@
                 });
             });
 
-            // Animate number counters (for stats)
-            // Bewaar prefix (bv. "€ ") en suffix (bv. "u") tijdens de animatie
-            function animateValue(element, start, end, duration, opts = {}) {
-                const prefix = opts.prefix || '';
-                const suffix = opts.suffix || '';
-                let startTimestamp = null;
-                const step = (timestamp) => {
-                    if (!startTimestamp) startTimestamp = timestamp;
-                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                    const value = Math.floor(progress * (end - start) + start);
-                    element.textContent = `${prefix}${value.toLocaleString('nl-NL')}${suffix}`;
-                    if (progress < 1) {
-                        window.requestAnimationFrame(step);
-                    }
-                };
-                window.requestAnimationFrame(step);
-            }
-
-            function initializeCounterAnimations() {
-                // Pas de animatie alleen toe als we een getal vinden; behoud prefix/suffix
-                document.querySelectorAll('[class*="stat-card"] .mono').forEach(element => {
-                    const raw = element.textContent.trim();
-                    // Match: [prefix][number][suffix], waarbij prefix/suffix geen cijfers zijn
-                    const m = raw.match(/^(\D*?)[\s\u00A0]*([\d\.\,]+)[\s\u00A0]*(\D*)$/);
-                    if (!m) return;
-                    const [, prefix, numberPart, suffix] = m;
-                    const number = parseInt(numberPart.replace(/[^\d]/g, ''), 10);
-                    if (!isNaN(number) && number > 0) {
-                        animateValue(element, 0, number, 1000, {
-                            prefix: prefix || '',
-                            suffix: suffix || ''
-                        });
-                    }
-                });
-            }
+            // Counter animations are initialized in the main DOMContentLoaded block above
         });
     </script>
 </body>
