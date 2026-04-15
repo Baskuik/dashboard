@@ -14,6 +14,9 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
 
+    {{-- GSAP Animation Library --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
     <style>
         body {
             font-family: 'DM Sans', sans-serif;
@@ -1198,7 +1201,7 @@
                 if (costCard) {
                     const convertedCost = parseFloat(stats.total_cost) * currencyInfo.rate;
                     costCard.querySelector('.mono').textContent =
-                        `${currencyInfo.symbol} ${convertedCost.toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+                        `${currencyInfo.symbol}\u00A0${convertedCost.toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
                 }
 
                 // Update Gem. duur
@@ -1286,6 +1289,141 @@
         </script>
 
     </main>
+
+    <script>
+        // GSAP Animations - Dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate stat cards - fade in + slide up
+            gsap.to('[class*="stat-card"]', {
+                duration: 0.8,
+                opacity: 1,
+                y: 0,
+                stagger: 0.15,
+                ease: 'power2.out',
+            });
+
+            // Initial state for stat cards
+            gsap.set('[class*="stat-card"]', {
+                opacity: 0,
+                y: 30
+            });
+
+            // Animate charts - fade in + scale
+            setTimeout(() => {
+                gsap.to('[class*="chart-container"]', {
+                    duration: 0.8,
+                    opacity: 1,
+                    scale: 1,
+                    stagger: 0.2,
+                    ease: 'back.out',
+                });
+                gsap.set('[class*="chart-container"]', {
+                    opacity: 0,
+                    scale: 0.95
+                });
+            }, 300);
+
+            // Animate table rows - staggered fade in
+            setTimeout(() => {
+                const tableRows = document.querySelectorAll('tbody tr');
+                gsap.to(tableRows, {
+                    duration: 0.5,
+                    opacity: 1,
+                    x: 0,
+                    stagger: 0.1,
+                    ease: 'power1.out',
+                });
+                gsap.set(tableRows, {
+                    opacity: 0,
+                    x: -20
+                });
+            }, 600);
+
+            // Hover animation for stat cards
+            document.querySelectorAll('[class*="stat-card"]').forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    gsap.to(this, {
+                        duration: 0.3,
+                        scale: 1.03,
+                        boxShadow: '0 10px 30px rgba(59, 130, 246, 0.2)',
+                        ease: 'power2.out',
+                    });
+                });
+                card.addEventListener('mouseleave', function() {
+                    gsap.to(this, {
+                        duration: 0.3,
+                        scale: 1,
+                        boxShadow: 'none',
+                        ease: 'power2.out',
+                    });
+                });
+            });
+
+            // Hover animation for widget cards
+            document.querySelectorAll('[class*="widget"]').forEach(widget => {
+                if (widget.classList.contains('widget-card')) {
+                    widget.addEventListener('mouseenter', function() {
+                        gsap.to(this, {
+                            duration: 0.3,
+                            borderColor: 'rgba(59, 130, 246, 0.5)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            ease: 'power2.out',
+                        });
+                    });
+                    widget.addEventListener('mouseleave', function() {
+                        gsap.to(this, {
+                            duration: 0.3,
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            backgroundColor: 'transparent',
+                            ease: 'power2.out',
+                        });
+                    });
+                }
+            });
+
+            // Animate buttons on hover
+            document.querySelectorAll('button, a[class*="btn"]').forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    gsap.to(this, {
+                        duration: 0.2,
+                        scale: 1.05,
+                        ease: 'power2.out',
+                    });
+                });
+                btn.addEventListener('mouseleave', function() {
+                    gsap.to(this, {
+                        duration: 0.2,
+                        scale: 1,
+                        ease: 'power2.out',
+                    });
+                });
+            });
+
+            // Animate number counters (for stats)
+            function animateValue(element, start, end, duration) {
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    const value = Math.floor(progress * (end - start) + start);
+                    element.textContent = value.toLocaleString('nl-NL');
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    }
+                };
+                window.requestAnimationFrame(step);
+            }
+
+            // Apply counter animation to stat numbers
+            document.querySelectorAll('[class*="stat-card"] .mono').forEach(element => {
+                const text = element.textContent.trim();
+                const number = parseInt(text.replace(/\D/g, ''), 10);
+                if (!isNaN(number) && number > 0) {
+                    animateValue(element, 0, number, 1000);
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
