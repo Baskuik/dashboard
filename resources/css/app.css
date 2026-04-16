@@ -13,3 +13,140 @@
 html {
     color-scheme: light dark;
 }
+
+/* Filament Admin Panel Styling - Match Dashboard */
+@layer base {
+
+    /* Dark mode styling for Filament */
+    html.dark {
+        background-color: #162a4a !important;
+        color: #f3f4f6 !important;
+        color-scheme: dark;
+    }
+
+    html.dark body {
+        background-color: #162a4a !important;
+        color: #f3f4f6 !important;
+    }
+
+    /* Main content area */
+    html.dark .fi-main {
+        background-color: #162a4a !important;
+    }
+
+    html.dark [class*="fi-app"] {
+        background-color: #162a4a !important;
+    }
+
+    html.dark .fi-sidebar {
+        background-color: #1e3a5f !important;
+        border-right-color: rgba(59, 130, 246, 0.3) !important;
+    }
+
+    html.dark .fi-topbar,
+    html.dark .fi-header,
+    html.dark [class*="fi-header"] {
+        background-color: #1e3a5f !important;
+        border-bottom-color: rgba(59, 130, 246, 0.3) !important;
+    }
+
+    html.dark .fi-page,
+    html.dark [class*="fi-page"] {
+        background-color: #162a4a !important;
+    }
+
+    /* Sections and cards */
+    html.dark .fi-section,
+    html.dark [class*="fi-section"],
+    html.dark .fi-card,
+    html.dark [class*="fi-card"],
+    html.dark section {
+        background-color: #1e3a5f !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+    }
+
+    /* Tables */
+    html.dark .fi-table,
+    html.dark table,
+    html.dark [class*="fi-table"] {
+        background-color: #1e3a5f !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        color: #f3f4f6 !important;
+    }
+
+    html.dark thead {
+        background-color: rgba(59, 130, 246, 0.15) !important;
+    }
+
+    html.dark tbody tr {
+        border-color: rgba(59, 130, 246, 0.15) !important;
+    }
+
+    html.dark tbody tr:hover {
+        background-color: rgba(59, 130, 246, 0.15) !important;
+    }
+
+    /* Modals and dialogs */
+    html.dark .fi-modal,
+    html.dark [role="dialog"] {
+        background-color: #1e3a5f !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+    }
+
+    /* Forms and inputs */
+    html.dark input,
+    html.dark textarea,
+    html.dark select {
+        background-color: #162a4a !important;
+        color: #f3f4f6 !important;
+        border-color: rgba(59, 130, 246, 0.4) !important;
+    }
+
+    html.dark input:focus,
+    html.dark textarea:focus,
+    html.dark select:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    }
+
+    /* Buttons */
+    html.dark button,
+    html.dark [role="button"] {
+        transition: all 150ms ease !important;
+    }
+
+    /* Sidebar navigation items */
+    html.dark [class*="sidebar"] a {
+        color: #9ca3af !important;
+    }
+
+    html.dark [class*="sidebar"] a:hover {
+        color: #60a5fa !important;
+        background-color: rgba(59, 130, 246, 0.1) !important;
+    }
+
+    html.dark [class*="sidebar"] a[class*="active"] {
+        color: #60a5fa !important;
+        background-color: rgba(59, 130, 246, 0.1) !important;
+        border-left-color: #3b82f6 !important;
+    }
+
+    /* Text colors */
+    html.dark [class*="fi-"],
+    html.dark .dark {
+        color: #f3f4f6 !important;
+    }
+
+    html.dark [class*="text-gray"] {
+        color: #f3f4f6 !important;
+    }
+
+    /* Links */
+    html.dark a[class*="link"] {
+        color: #60a5fa !important;
+    }
+
+    html.dark a[class*="link"]:hover {
+        color: #93c5fd !important;
+    }
+}
