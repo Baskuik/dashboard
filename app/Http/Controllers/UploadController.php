@@ -61,7 +61,7 @@ class UploadController extends Controller
             'filename' => $fileName,
             'status' => 'pending',
             'processed_rows' => 0,
-            'expires_at' => now()->addHours(24),
+            'expires_at' => now()->addHours(12),
         ]);
 
         try {
