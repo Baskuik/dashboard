@@ -10,9 +10,10 @@
 
     {{-- Totaal acties --}}
     <a href="{{ route('records.by-action') }}?{{ http_build_query(request()->query()) }}"
-        class="stat-card group border border-white/8 bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-blue-500/30 transition">
+        class="stat-card group border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-blue-400 dark:hover:border-blue-500/30 transition shadow-sm dark:shadow-none">
         <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Totaal acties</span>
+            <span class="text-xs font-medium text-gray-600 dark:text-gray-500 uppercase tracking-wider">Totaal
+                acties</span>
             <div
                 class="w-8 h-8 bg-blue-500/15 rounded-lg flex items-center justify-center group-hover:bg-blue-500/25 transition">
                 <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -22,8 +23,8 @@
             </div>
         </div>
         <div>
-            <p class="text-3xl font-semibold text-white mono">{{ $stats['total_actions'] ?? 0 }}</p>
-            <p class="text-xs text-gray-600 mt-1">records geregistreerd</p>
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white mono">{{ $stats['total_actions'] ?? 0 }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-600 mt-1">records geregistreerd</p>
         </div>
         <span class="text-xs text-blue-400 group-hover:text-blue-300 transition flex items-center gap-1">
             Bekijk per actie
@@ -35,9 +36,10 @@
 
     {{-- Totale kosten --}}
     <a href="{{ route('records.by-cost') }}?{{ http_build_query(request()->query()) }}"
-        class="stat-card group border border-white/8 bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-cyan-500/30 transition">
+        class="stat-card group border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-cyan-400 dark:hover:border-cyan-500/30 transition shadow-sm dark:shadow-none">
         <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Totale kosten</span>
+            <span class="text-xs font-medium text-gray-600 dark:text-gray-500 uppercase tracking-wider">Totale
+                kosten</span>
             <div
                 class="w-8 h-8 bg-cyan-500/15 rounded-lg flex items-center justify-center group-hover:bg-cyan-500/25 transition">
                 <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,12 +49,12 @@
             </div>
         </div>
         <div>
-            <p id="stat-total-cost" class="text-3xl font-semibold text-white mono"
+            <p id="stat-total-cost" class="text-3xl font-semibold text-gray-900 dark:text-white mono"
                 data-value="{{ $stats['total_cost'] ?? 0 }}">
                 <span class="currency-symbol">€</span>&nbsp;<span
                     class="currency-value">{{ number_format($stats['total_cost'] ?? 0, 0, ',', '.') }}</span>
             </p>
-            <p class="text-xs text-gray-600 mt-1">totale uitgaven</p>
+            <p class="text-xs text-gray-500 dark:text-gray-600 mt-1">totale uitgaven</p>
         </div>
         <span class="text-xs text-cyan-400 group-hover:text-cyan-300 transition flex items-center gap-1">
             Bekijk per kosten
@@ -64,9 +66,9 @@
 
     {{-- Gemiddelde duur --}}
     <a href="{{ route('records.by-duration') }}?{{ http_build_query(request()->query()) }}"
-        class="stat-card group border border-white/8 bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-emerald-500/30 transition">
+        class="stat-card group border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-emerald-400 dark:hover:border-emerald-500/30 transition shadow-sm dark:shadow-none">
         <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Gem. duur</span>
+            <span class="text-xs font-medium text-gray-700 dark:text-gray-500 uppercase tracking-wider">Gem. duur</span>
             <div
                 class="w-8 h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center group-hover:bg-emerald-500/25 transition">
                 <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,11 +78,12 @@
             </div>
         </div>
         <div>
-            <p class="text-3xl font-semibold text-white mono">
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white mono">
                 {{ number_format($stats['avg_duration'] ?? 0, 1, ',', '.') }}u</p>
-            <p class="text-xs text-gray-600 mt-1">gemiddeld per actie</p>
+            <p class="text-xs text-gray-600 dark:text-gray-600 mt-1">gemiddeld per actie</p>
         </div>
-        <span class="text-xs text-emerald-400 group-hover:text-emerald-300 transition flex items-center gap-1">
+        <span
+            class="text-xs text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition flex items-center gap-1">
             Bekijk per duur
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -90,9 +93,10 @@
 
     {{-- Medewerkers --}}
     <a href="{{ route('records.by-employee') }}?{{ http_build_query(request()->query()) }}"
-        class="stat-card group border border-white/8 bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-violet-500/30 transition">
+        class="stat-card group border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-5 flex flex-col gap-3 hover:border-violet-400 dark:hover:border-violet-500/30 transition shadow-sm dark:shadow-none">
         <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Medewerkers</span>
+            <span
+                class="text-xs font-medium text-gray-600 dark:text-gray-500 uppercase tracking-wider">Medewerkers</span>
             <div
                 class="w-8 h-8 bg-violet-500/15 rounded-lg flex items-center justify-center group-hover:bg-violet-500/25 transition">
                 <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,8 +106,9 @@
             </div>
         </div>
         <div>
-            <p class="text-3xl font-semibold text-white mono">{{ $stats['total_employees'] ?? 0 }}</p>
-            <p class="text-xs text-gray-600 mt-1">betrokken medewerkers</p>
+            <p class="text-3xl font-semibold text-gray-900 dark:text-white mono">{{ $stats['total_employees'] ?? 0 }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-600 mt-1">betrokken medewerkers</p>
         </div>
         <span class="text-xs text-violet-400 group-hover:text-violet-300 transition flex items-center gap-1">
             Bekijk per medewerker

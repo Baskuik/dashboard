@@ -37,7 +37,7 @@
     </style>
 </head>
 
-<body class="bg-[#0b0f1a] text-gray-100 min-h-screen">
+<body class="bg-[#0b0f1a] dark:bg-[#1a1f2e] dark:text-gray-100 text-gray-900 min-h-screen">
     <!-- Theme Initialization -->
     <script>
         (function() {
@@ -45,8 +45,12 @@
             const html = document.documentElement;
             if (theme === 'light') {
                 html.classList.remove('dark');
+                document.body.classList.add('bg-[#f5f5f5]');
+                document.body.classList.remove('bg-[#1a1f2e]');
             } else {
                 html.classList.add('dark');
+                document.body.classList.remove('bg-[#f5f5f5]');
+                document.body.classList.add('bg-[#1a1f2e]');
             }
         })();
     </script>
@@ -67,7 +71,8 @@
             </div>
 
             {{-- Upload Section --}}
-            <div class="border border-white/8 bg-[#131928] rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
+            <div
+                class="border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-sm dark:shadow-none">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-4">
                     <div>
                         <h2 class="text-sm sm:text-base font-semibold text-white">Excel-bestand uploaden</h2>
@@ -123,7 +128,7 @@
                 <div id="confirm-modal"
                     class="hidden fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200">
                     <div
-                        class="bg-[#131928] border border-white/10 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl transform transition">
+                        class="bg-white dark:bg-[#131928] border border-gray-200 dark:border-white/10 rounded-xl p-8 max-w-md w-full mx-4 shadow-lg dark:shadow-2xl transform transition">
                         <!-- Icon -->
                         <div class="flex justify-center mb-6">
                             <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
@@ -217,7 +222,8 @@
             </div>
 
             {{-- Show filters and stats always (whether widgets are selected or not) --}}
-            <div class="border border-white/8 bg-[#131928] rounded-xl p-6 mb-8">
+            <div
+                class="border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-6 mb-8 shadow-sm dark:shadow-none">
                 <h2 class="text-base font-semibold text-white mb-4">Filter &amp; Zoeking</h2>
                 <form method="GET" class="space-y-4" id="dashboard-filter-form">
                     <!-- Search Row -->
@@ -230,7 +236,7 @@
                             </svg>
                             <input type="text" name="search" placeholder="Zoeken op actie of medewerker..."
                                 value="{{ $search ?? '' }}"
-                                class="w-full pl-10 pr-4 py-2.5 bg-[#131928] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition">
+                                class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#131928] border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition">
                         </div>
                     </div>
 
@@ -243,7 +249,7 @@
                                 <input type="hidden" name="from_date" id="from_date_hidden"
                                     value="{{ $fromDate ?? '' }}">
                                 <button type="button" id="from-date-btn"
-                                    class="w-full px-4 py-2.5 bg-[#131928] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition flex items-center justify-between hover:border-white/20">
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-[#131928] border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition flex items-center justify-between hover:border-gray-400 dark:hover:border-white/20">
                                     <span
                                         id="from-date-display">{{ $fromDate ? \Carbon\Carbon::parse($fromDate)->format('d M Y') : 'Selecteer datum' }}</span>
                                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor"
@@ -254,7 +260,7 @@
                                 </button>
                                 <!-- From Calendar (simplified - same as records-grouped) -->
                                 <div id="from-calendar"
-                                    class="hidden absolute top-full left-0 mt-2 bg-[#131928] border border-white/10 rounded-lg shadow-2xl z-50 p-4 w-80">
+                                    class="hidden absolute top-full left-0 mt-2 bg-white dark:bg-[#131928] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg dark:shadow-2xl z-50 p-4 w-80">
                                     <div class="flex items-center justify-between mb-4">
                                         <button type="button" id="from-month-year-btn"
                                             class="flex items-center gap-1 px-3 py-1.5 text-white text-sm font-semibold hover:bg-white/10 rounded transition">
@@ -360,7 +366,7 @@
                                 <input type="hidden" name="to_date" id="to_date_hidden"
                                     value="{{ $toDate ?? '' }}">
                                 <button type="button" id="to-date-btn"
-                                    class="w-full px-4 py-2.5 bg-[#131928] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition flex items-center justify-between hover:border-white/20">
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-[#131928] border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition flex items-center justify-between hover:border-gray-400 dark:hover:border-white/20">
                                     <span
                                         id="to-date-display">{{ $toDate ? \Carbon\Carbon::parse($toDate)->format('d M Y') : 'Selecteer datum' }}</span>
                                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor"
@@ -371,7 +377,7 @@
                                 </button>
                                 <!-- To Calendar -->
                                 <div id="to-calendar"
-                                    class="hidden absolute top-full left-0 mt-2 bg-[#131928] border border-white/10 rounded-lg shadow-2xl z-50 p-4 w-80">
+                                    class="hidden absolute top-full left-0 mt-2 bg-white dark:bg-[#131928] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg dark:shadow-2xl z-50 p-4 w-80">
                                     <div class="flex items-center justify-between mb-4">
                                         <button type="button" id="to-month-year-btn"
                                             class="flex items-center gap-1 px-3 py-1.5 text-white text-sm font-semibold hover:bg-white/10 rounded transition">
@@ -476,7 +482,7 @@
                         <div class="flex-1 relative">
                             <label class="block text-xs font-medium text-gray-400 mb-1.5">Kosten bereik</label>
                             <div
-                                class="flex gap-2 items-center bg-[#131928] border border-white/10 rounded-lg p-4 hover:border-white/20 transition">
+                                class="flex gap-2 items-center bg-white dark:bg-[#1e3a5f] border border-gray-200 dark:border-white/10 rounded-lg p-4 hover:border-gray-300 dark:hover:border-white/20 transition shadow-sm dark:shadow-none">
                                 <!-- Currency Selector -->
                                 <div class="relative">
                                     <button type="button" id="currency-btn"
@@ -603,7 +609,7 @@
             {{-- No Widgets Selected State --}}
             @if (empty($selectedWidgets))
                 <div
-                    class="border border-white/8 bg-[#131928] rounded-xl p-16 mb-8 flex flex-col items-center justify-center text-center">
+                    class="border border-gray-200 dark:border-white/8 bg-white dark:bg-[#1e3a5f] rounded-xl p-16 mb-8 flex flex-col items-center justify-center text-center shadow-sm dark:shadow-none">
                     <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
                         <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">

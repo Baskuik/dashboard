@@ -61,7 +61,7 @@
     </style>
 </head>
 
-<body class="bg-[#0b0f1a] text-gray-100 min-h-screen">
+<body class="bg-[#1a1f2e] dark:bg-[#1a1f2e] dark:text-gray-100 text-gray-900 min-h-screen">
     <!-- Theme Initialization -->
     <script>
         (function() {
@@ -69,8 +69,12 @@
             const html = document.documentElement;
             if (theme === 'light') {
                 html.classList.remove('dark');
+                document.body.classList.add('bg-[#f5f5f5]');
+                document.body.classList.remove('bg-[#050a14]');
             } else {
                 html.classList.add('dark');
+                document.body.classList.remove('bg-[#f5f5f5]');
+                document.body.classList.add('bg-[#1a1f2e]');
             }
         })();
     </script>
@@ -114,7 +118,7 @@
                             </svg>
                             <input type="text" name="search" placeholder="Zoeken op actie of medewerker..."
                                 value="{{ $search ?? '' }}"
-                                class="w-full pl-10 pr-4 py-2.5 bg-[#131928] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition min-h-[44px]">
+                                class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#1e3a5f] border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition min-h-[44px]">
                         </div>
                         <button type="submit"
                             class="sm:shrink-0 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2 min-h-[44px]">
@@ -135,7 +139,7 @@
                                 <input type="hidden" name="from_date" id="from_date_hidden"
                                     value="{{ $fromDate ?? '' }}">
                                 <button type="button" id="from-date-btn"
-                                    class="w-full px-4 py-2.5 bg-[#131928] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition flex items-center justify-between hover:border-white/20 min-h-[44px]">
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-[#131928] border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition flex items-center justify-between hover:border-gray-400 dark:hover:border-white/20 min-h-[44px]">
                                     <span
                                         id="from-date-display">{{ $fromDate ? \Carbon\Carbon::parse($fromDate)->format('d M Y') : 'Selecteer datum' }}</span>
                                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor"
@@ -146,7 +150,7 @@
                                 </button>
                                 <!-- Popup Calendar From -->
                                 <div id="from-calendar"
-                                    class="hidden absolute top-full left-0 mt-2 bg-[#131928] border border-white/10 rounded-lg shadow-2xl z-50 p-4 w-80">
+                                    class="hidden absolute top-full left-0 mt-2 bg-white dark:bg-[#131928] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg dark:shadow-2xl z-50 p-4 w-80">
                                     <div class="flex items-center justify-between mb-4">
                                         <button type="button" id="from-month-year-btn"
                                             class="flex items-center gap-1 px-3 py-1.5 text-white text-sm font-semibold hover:bg-white/10 rounded transition">
@@ -255,7 +259,7 @@
                                 <input type="hidden" name="to_date" id="to_date_hidden"
                                     value="{{ $toDate ?? '' }}">
                                 <button type="button" id="to-date-btn"
-                                    class="w-full px-4 py-2.5 bg-[#131928] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition flex items-center justify-between hover:border-white/20 min-h-[44px]">
+                                    class="w-full px-4 py-2.5 bg-white dark:bg-[#131928] border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition flex items-center justify-between hover:border-gray-400 dark:hover:border-white/20 min-h-[44px]">
                                     <span
                                         id="to-date-display">{{ $toDate ? \Carbon\Carbon::parse($toDate)->format('d M Y') : 'Selecteer datum' }}</span>
                                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor"
@@ -266,7 +270,7 @@
                                 </button>
                                 <!-- Popup Calendar To -->
                                 <div id="to-calendar"
-                                    class="hidden absolute top-full left-0 mt-2 bg-[#131928] border border-white/10 rounded-lg shadow-2xl z-50 p-4 w-80">
+                                    class="hidden absolute top-full left-0 mt-2 bg-white dark:bg-[#131928] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg dark:shadow-2xl z-50 p-4 w-80">
                                     <div class="flex items-center justify-between mb-4">
                                         <button type="button" id="to-month-year-btn"
                                             class="flex items-center gap-1 px-3 py-1.5 text-white text-sm font-semibold hover:bg-white/10 rounded transition">
@@ -375,11 +379,11 @@
                         <div class="flex-1 relative">
                             <label class="block text-xs font-medium text-gray-400 mb-1.5">Kosten bereik</label>
                             <div
-                                class="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center bg-[#131928] border border-white/10 rounded-lg p-3 sm:p-4 hover:border-white/20 transition">
+                                class="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center bg-white dark:bg-[#131928] border border-gray-200 dark:border-white/10 rounded-lg p-3 sm:p-4 hover:border-gray-300 dark:hover:border-white/20 transition shadow-sm dark:shadow-none">
                                 <!-- Currency Selector -->
                                 <div class="relative w-full sm:w-auto">
                                     <button type="button" id="currency-btn"
-                                        class="flex items-center gap-1 px-2 py-2 sm:py-1.5 text-white text-sm font-semibold hover:bg-white/10 rounded transition w-full sm:w-auto justify-center sm:justify-start min-h-[44px] sm:min-h-auto">
+                                        class="flex items-center gap-1 px-2 py-2 sm:py-1.5 text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-100 dark:hover:bg-white/10 rounded transition w-full sm:w-auto justify-center sm:justify-start min-h-[44px] sm:min-h-auto">
                                         <span id="currency-symbol">€</span>
                                         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24">
@@ -459,22 +463,22 @@
                                 <div class="flex-1 w-full sm:w-auto">
                                     <div class="text-xs text-gray-500 mb-2">Min</div>
                                     <div
-                                        class="flex items-center gap-2 min-h-[44px] sm:min-h-auto sm:h-auto px-3 py-2 sm:p-0 bg-white/5 sm:bg-transparent rounded sm:rounded-none">
+                                        class="flex items-center gap-2 min-h-[44px] sm:min-h-auto sm:h-auto px-3 py-2 sm:p-0 bg-white/5 dark:bg-transparent sm:bg-transparent rounded sm:rounded-none">
                                         <span class="text-xs text-gray-400" id="min-currency-symbol">€</span>
                                         <input type="number" name="min_cost" placeholder="0" step="0.01"
                                             id="min_cost_input" value="{{ $minCost ?? '' }}"
-                                            class="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder-gray-600">
+                                            class="flex-1 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none placeholder-gray-500 dark:placeholder-gray-600">
                                     </div>
                                 </div>
                                 <div class="hidden sm:block h-8 w-px bg-white/10"></div>
                                 <div class="flex-1 w-full sm:w-auto">
                                     <div class="text-xs text-gray-500 mb-2">Max</div>
                                     <div
-                                        class="flex items-center gap-2 min-h-[44px] sm:min-h-auto sm:h-auto px-3 py-2 sm:p-0 bg-white/5 sm:bg-transparent rounded sm:rounded-none">
+                                        class="flex items-center gap-2 min-h-[44px] sm:min-h-auto sm:h-auto px-3 py-2 sm:p-0 bg-white/5 dark:bg-transparent sm:bg-transparent rounded sm:rounded-none">
                                         <span class="text-xs text-gray-400" id="max-currency-symbol">€</span>
                                         <input type="number" name="max_cost" placeholder="0" step="0.01"
                                             id="max_cost_input" value="{{ $maxCost ?? '' }}"
-                                            class="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder-gray-600">
+                                            class="flex-1 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none placeholder-gray-500 dark:placeholder-gray-600">
                                     </div>
                                 </div>
                             </div>
@@ -1181,7 +1185,8 @@
                 @php
                     $tableId = 'table-' . Str::slug($groupName);
                 @endphp
-                <div class="border border-white/8 bg-[#131928] rounded-xl p-5 mb-4">
+                <div
+                    class="border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-5 mb-4 shadow-sm dark:shadow-none">
 
                     {{-- Group header --}}
                     <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
@@ -1303,7 +1308,8 @@
                     </div>
                 </div>
             @empty
-                <div class="border border-white/8 bg-[#131928] rounded-xl p-16 text-center">
+                <div
+                    class="border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-16 text-center shadow-sm dark:shadow-none">
                     <p class="text-gray-600 text-sm">Geen records gevonden.</p>
                     <a href="{{ route('dashboard') }}"
                         class="text-blue-400 text-sm hover:text-blue-300 transition mt-2 inline-block">

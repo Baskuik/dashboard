@@ -13,11 +13,11 @@
 }
 
 html.dark {
-    background: #162a4a !important;
+    background: #1a1f2e !important;
 }
 
 body {
-    background-color: #162a4a !important;
+    background-color: #1a1f2e !important;
     color: #f3f4f6 !important;
 }
 
@@ -26,7 +26,7 @@ body {
 .fi-app-layout,
 [class*="app-layout"],
 main {
-    background-color: #162a4a !important;
+    background-color: #1a1f2e !important;
 }
 
 /* Sidebar */
@@ -57,7 +57,7 @@ main {
 .fi-card,
 [class*="card"] {
     background-color: #1e3a5f !important;
-    border: 1px solid rgba(59, 130, 246, 0.2) !important;
+    border: 1px solid rgba(99, 155, 230, 0.2) !important;
 }
 
 /* Tables */

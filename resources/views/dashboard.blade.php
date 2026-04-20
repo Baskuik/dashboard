@@ -57,7 +57,23 @@
     </style>
 </head>
 
-<body class="bg-[#0b0f1a] dark:bg-[#0b0f1a] text-gray-100 dark:text-gray-100 min-h-screen">
+<body class="bg-[#0b0f1a] dark:bg-[#050a14] dark:text-gray-100 text-gray-900 min-h-screen">
+    <!-- Theme Initialization -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'dark';
+            const html = document.documentElement;
+            if (theme === 'light') {
+                html.classList.remove('dark');
+                document.body.classList.add('bg-[#f5f5f5]');
+                document.body.classList.remove('bg-[#050a14]');
+            } else {
+                html.classList.add('dark');
+                document.body.classList.remove('bg-[#f5f5f5]');
+                document.body.classList.add('bg-[#050a14]');
+            }
+        })();
+    </script>
     <!-- Theme Initialization -->
     <script>
         (function() {

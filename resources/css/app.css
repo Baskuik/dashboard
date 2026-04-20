@@ -14,45 +14,299 @@ html {
     color-scheme: light dark;
 }
 
+/* Light mode styling */
+@layer base {
+    html:not(.dark) {
+        background-color: #f5f5f5 !important;
+        color: #1f2937 !important;
+        color-scheme: light;
+    }
+
+    html:not(.dark) body {
+        background-color: #f5f5f5 !important;
+        color: #1f2937 !important;
+    }
+
+    html:not(.dark) .fi-main {
+        background-color: #f5f5f5 !important;
+    }
+
+    html:not(.dark) [class*="fi-app"] {
+        background-color: #f5f5f5 !important;
+    }
+
+    html:not(.dark) .fi-sidebar {
+        background-color: #f3f4f6 !important;
+        border-right-color: #e5e7eb !important;
+    }
+
+    html:not(.dark) .fi-topbar,
+    html:not(.dark) .fi-header,
+    html:not(.dark) [class*="fi-header"] {
+        background-color: #f9fafb !important;
+        border-bottom-color: #e5e7eb !important;
+    }
+
+    html:not(.dark) .fi-page,
+    html:not(.dark) [class*="fi-page"] {
+        background-color: #f5f5f5 !important;
+    }
+
+    /* Sections and cards - light mode */
+    html:not(.dark) .fi-section,
+    html:not(.dark) [class*="fi-section"],
+    html:not(.dark) .fi-card,
+    html:not(.dark) [class*="fi-card"],
+    html:not(.dark) section,
+    html:not(.dark) div[class*="border"],
+    html:not(.dark) .stat-card {
+        background-color: #ffffff !important;
+        border: 1px solid #d1d5db !important;
+        color: #1f2937 !important;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+    }
+
+    html:not(.dark) .stat-card:hover {
+        border-color: #9ca3af !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    /* Input fields - light mode */
+    html:not(.dark) input,
+    html:not(.dark) textarea,
+    html:not(.dark) select {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border: 1px solid #d1d5db !important;
+    }
+
+    html:not(.dark) input::placeholder,
+    html:not(.dark) textarea::placeholder {
+        color: #9ca3af !important;
+    }
+
+    html:not(.dark) input:focus,
+    html:not(.dark) textarea:focus,
+    html:not(.dark) select:focus {
+        border-color: #6b7280 !important;
+        box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1) !important;
+    }
+
+    /* Remove blue autofill background in light mode */
+    html:not(.dark) input:-webkit-autofill,
+    html:not(.dark) input:-webkit-autofill:hover,
+    html:not(.dark) input:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+        box-shadow: 0 0 0 1000px #ffffff inset !important;
+        -webkit-text-fill-color: #1f2937 !important;
+    }
+
+    html:not(.dark) input:-webkit-autofill::first-line {
+        -webkit-text-fill-color: #1f2937 !important;
+    }
+
+    /* Buttons in light mode */
+    html:not(.dark) button {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border-color: #d1d5db !important;
+    }
+
+    html:not(.dark) button[type="submit"],
+    html:not(.dark) input[type="submit"] {
+        background-color: #3b82f6 !important;
+        color: #ffffff !important;
+        border-color: #3b82f6 !important;
+    }
+
+    /* Keep navbar buttons their original style in light mode */
+    html:not(.dark) #theme-toggle-btn,
+    html:not(.dark) #user-menu-btn {
+        background-color: inherit !important;
+        color: #ffffff !important;
+        border-color: inherit !important;
+    }
+
+    html:not(.dark) #theme-toggle-btn svg,
+    html:not(.dark) #user-menu-btn svg {
+        color: #ffffff !important;
+    }
+
+    html:not(.dark) thead {
+        background-color: #f3f4f6 !important;
+    }
+
+    html:not(.dark) tbody tr {
+        border-color: #f3f4f6 !important;
+    }
+
+    html:not(.dark) tbody tr:hover {
+        background-color: #f9fafb !important;
+    }
+
+    /* Modals and dialogs - light mode */
+    html:not(.dark) .fi-modal,
+    html:not(.dark) [role="dialog"] {
+        background-color: #ffffff !important;
+        border-color: #e5e7eb !important;
+    }
+
+    /* Forms and inputs - light mode */
+    html:not(.dark) input,
+    html:not(.dark) textarea,
+    html:not(.dark) select {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border-color: #d1d5db !important;
+    }
+
+    html:not(.dark) input:focus,
+    html:not(.dark) textarea:focus,
+    html:not(.dark) select:focus {
+        border-color: #6b7280 !important;
+        box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1) !important;
+    }
+
+    /* Sidebar navigation items - light mode */
+    html:not(.dark) [class*="sidebar"] a {
+        color: #6b7280 !important;
+    }
+
+    html:not(.dark) [class*="sidebar"] a:hover {
+        color: #1f2937 !important;
+        background-color: #f3f4f6 !important;
+    }
+
+    html:not(.dark) [class*="sidebar"] a[class*="active"] {
+        color: #2563eb !important;
+        background-color: #dbeafe !important;
+        border-left-color: #3b82f6 !important;
+    }
+
+    /* Text colors - light mode */
+    html:not(.dark) [class*="fi-"],
+    html:not(.dark) .light {
+        color: #1f2937 !important;
+    }
+
+    html:not(.dark) [class*="text-gray"] {
+        color: #6b7280 !important;
+    }
+
+    /* Buttons - light mode */
+    html:not(.dark) button[type="button"],
+    html:not(.dark) button[type="submit"] {
+        color: #1f2937 !important;
+        background-color: #ffffff !important;
+        border-color: #d1d5db !important;
+    }
+
+    html:not(.dark) button:hover {
+        background-color: #f9fafb !important;
+        border-color: #9ca3af !important;
+    }
+
+    html:not(.dark) button[id*="date-btn"],
+    html:not(.dark) button[id*="month-year-btn"],
+    html:not(.dark) button[id*="currency-btn"] {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border-color: #d1d5db !important;
+    }
+
+    /* Labels - light mode */
+    html:not(.dark) label {
+        color: #374151 !important;
+    }
+
+    /* Placeholders and display text - light mode */
+    html:not(.dark) span[id*="display"],
+    html:not(.dark) [class*="placeholder"] {
+        color: #1f2937 !important;
+    }
+
+    /* Override all button backgrounds in light mode */
+    html:not(.dark) button {
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border-color: #d1d5db !important;
+    }
+
+    /* Keep navbar buttons their original style in light mode */
+    html:not(.dark) #theme-toggle-btn,
+    html:not(.dark) #user-menu-btn {
+        background-color: inherit !important;
+        color: #ffffff !important;
+        border-color: inherit !important;
+    }
+
+    html:not(.dark) #theme-toggle-btn svg,
+    html:not(.dark) #user-menu-btn svg {
+        color: #ffffff !important;
+    }
+
+    html:not(.dark) input[type="submit"],
+    html:not(.dark) button[type="submit"] {
+        background-color: #3b82f6 !important;
+        color: #ffffff !important;
+        border-color: #3b82f6 !important;
+    }
+
+    html:not(.dark) input[type="submit"]:hover,
+    html:not(.dark) button[type="submit"]:hover {
+        background-color: #2563eb !important;
+        border-color: #2563eb !important;
+    }
+
+    /* Links - light mode */
+    html:not(.dark) a[class*="link"] {
+        color: #2563eb !important;
+    }
+
+    html:not(.dark) a[class*="link"]:hover {
+        color: #1d4ed8 !important;
+    }
+}
+
 /* Filament Admin Panel Styling - Match Dashboard */
 @layer base {
 
     /* Dark mode styling for Filament */
     html.dark {
-        background-color: #162a4a !important;
+        background-color: #1a1f2e !important;
         color: #f3f4f6 !important;
         color-scheme: dark;
     }
 
     html.dark body {
-        background-color: #162a4a !important;
+        background-color: #1a1f2e !important;
         color: #f3f4f6 !important;
     }
 
     /* Main content area */
     html.dark .fi-main {
-        background-color: #162a4a !important;
+        background-color: #1a1f2e !important;
     }
 
     html.dark [class*="fi-app"] {
-        background-color: #162a4a !important;
+        background-color: #1a1f2e !important;
     }
 
     html.dark .fi-sidebar {
         background-color: #1e3a5f !important;
-        border-right-color: rgba(59, 130, 246, 0.3) !important;
+        border-right: 1px solid rgba(59, 130, 246, 0.2) !important;
     }
 
     html.dark .fi-topbar,
     html.dark .fi-header,
     html.dark [class*="fi-header"] {
         background-color: #1e3a5f !important;
-        border-bottom-color: rgba(59, 130, 246, 0.3) !important;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.2) !important;
     }
 
     html.dark .fi-page,
     html.dark [class*="fi-page"] {
-        background-color: #162a4a !important;
+        background-color: #1a1f2e !important;
     }
 
     /* Sections and cards */
@@ -60,8 +314,13 @@ html {
     html.dark [class*="fi-section"],
     html.dark .fi-card,
     html.dark [class*="fi-card"],
-    html.dark section {
+    html.dark section,
+    html.dark .stat-card {
         background-color: #1e3a5f !important;
+        border: 1px solid rgba(59, 130, 246, 0.2) !important;
+    }
+
+    html.dark .stat-card:hover {
         border-color: rgba(59, 130, 246, 0.3) !important;
     }
 
@@ -70,27 +329,28 @@ html {
     html.dark table,
     html.dark [class*="fi-table"] {
         background-color: #1e3a5f !important;
-        border-color: rgba(59, 130, 246, 0.3) !important;
+        border: 1px solid rgba(59, 130, 246, 0.2) !important;
         color: #f3f4f6 !important;
     }
 
     html.dark thead {
-        background-color: rgba(59, 130, 246, 0.15) !important;
+        background-color: rgba(59, 130, 246, 0.1) !important;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.2) !important;
     }
 
     html.dark tbody tr {
-        border-color: rgba(59, 130, 246, 0.15) !important;
+        border-color: rgba(59, 130, 246, 0.1) !important;
     }
 
     html.dark tbody tr:hover {
-        background-color: rgba(59, 130, 246, 0.15) !important;
+        background-color: rgba(59, 130, 246, 0.1) !important;
     }
 
     /* Modals and dialogs */
     html.dark .fi-modal,
     html.dark [role="dialog"] {
         background-color: #1e3a5f !important;
-        border-color: rgba(59, 130, 246, 0.3) !important;
+        border: 1px solid rgba(59, 130, 246, 0.2) !important;
     }
 
     /* Forms and inputs */
@@ -99,14 +359,28 @@ html {
     html.dark select {
         background-color: #162a4a !important;
         color: #f3f4f6 !important;
-        border-color: rgba(59, 130, 246, 0.4) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        accent-color: #06b6d4 !important;
     }
 
     html.dark input:focus,
     html.dark textarea:focus,
     html.dark select:focus {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+        border-color: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Remove blue autofill background in dark mode */
+    html.dark input:-webkit-autofill,
+    html.dark input:-webkit-autofill:hover,
+    html.dark input:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0 1000px #131928 inset !important;
+        box-shadow: 0 0 0 1000px #131928 inset !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
+    html.dark input:-webkit-autofill::first-line {
+        -webkit-text-fill-color: #ffffff !important;
     }
 
     /* Buttons */
@@ -141,6 +415,17 @@ html {
         color: #f3f4f6 !important;
     }
 
+    /* Keep navbar buttons text white in dark mode */
+    html.dark #theme-toggle-btn,
+    html.dark #user-menu-btn {
+        color: #ffffff !important;
+    }
+
+    html.dark #theme-toggle-btn svg,
+    html.dark #user-menu-btn svg {
+        color: #ffffff !important;
+    }
+
     /* Links */
     html.dark a[class*="link"] {
         color: #60a5fa !important;
@@ -148,5 +433,29 @@ html {
 
     html.dark a[class*="link"]:hover {
         color: #93c5fd !important;
+    }
+
+    /* Navbar dropdown - light mode */
+    html:not(.dark) #user-menu-dropdown {
+        background-color: #ffffff !important;
+        border-color: #e5e7eb !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    html:not(.dark) #user-menu-dropdown a {
+        color: #6b7280 !important;
+    }
+
+    html:not(.dark) #user-menu-dropdown a:hover {
+        color: #1f2937 !important;
+        background-color: #f9fafb !important;
+    }
+
+    html:not(.dark) #user-menu-dropdown a.text-blue {
+        color: #2563eb !important;
+    }
+
+    html:not(.dark) #user-menu-dropdown hr {
+        border-color: #f3f4f6 !important;
     }
 }
