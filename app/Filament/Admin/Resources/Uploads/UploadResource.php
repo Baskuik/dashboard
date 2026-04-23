@@ -2,8 +2,6 @@
 
 namespace App\Filament\Admin\Resources\Uploads;
 
-use App\Filament\Admin\Resources\Uploads\Pages\CreateUpload;
-use App\Filament\Admin\Resources\Uploads\Pages\EditUpload;
 use App\Filament\Admin\Resources\Uploads\Pages\ListUploads;
 use App\Filament\Admin\Resources\Uploads\Schemas\UploadForm;
 use App\Filament\Admin\Resources\Uploads\Tables\UploadsTable;
@@ -18,7 +16,7 @@ class UploadResource extends Resource
 {
     protected static ?string $model = Upload::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpTray;
 
     public static function form(Schema $schema): Schema
     {
@@ -41,8 +39,6 @@ class UploadResource extends Resource
     {
         return [
             'index' => ListUploads::route('/'),
-            'create' => CreateUpload::route('/create'),
-            'edit' => EditUpload::route('/{record}/edit'),
         ];
     }
 }

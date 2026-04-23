@@ -60,7 +60,7 @@ html {
     html:not(.dark) section,
     html:not(.dark) div[class*="border"],
     html:not(.dark) .stat-card {
-        background-color: #ffffff !important;
+        background-color: #faf8f5 !important;
         border: 1px solid #d1d5db !important;
         color: #1f2937 !important;
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
@@ -147,7 +147,7 @@ html {
     /* Modals and dialogs - light mode */
     html:not(.dark) .fi-modal,
     html:not(.dark) [role="dialog"] {
-        background-color: #ffffff !important;
+        background-color: #faf8f5 !important;
         border-color: #e5e7eb !important;
     }
 
@@ -326,10 +326,15 @@ html {
 
     /* Tables */
     html.dark .fi-table,
-    html.dark table,
     html.dark [class*="fi-table"] {
         background-color: #1e3a5f !important;
         border: 1px solid rgba(59, 130, 246, 0.2) !important;
+        color: #f3f4f6 !important;
+    }
+
+    /* Records grouped table - transparent background */
+    html.dark table {
+        background-color: transparent !important;
         color: #f3f4f6 !important;
     }
 

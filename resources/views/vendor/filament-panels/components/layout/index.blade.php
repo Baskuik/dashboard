@@ -131,6 +131,7 @@
                 }
 
                 // User Menu Toggle
+                const userMenuBtn = document.getElementById('user-menu-btn');
                 const userMenuDropdown = document.getElementById('user-menu-dropdown');
 
                 if (userMenuBtn && userMenuDropdown) {

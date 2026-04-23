@@ -1175,18 +1175,51 @@
                 }
             </script>
 
-            {{-- Grouped records --}}
+            {{-- Global sort options --}}
             @php
                 $sortHeaderSvg =
                     '<svg class="sort-icon w-3 h-3" style="opacity:0.4;transition:transform 0.2s,opacity 0.2s" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>';
             @endphp
+
+            <div class="mb-6 bg-white dark:bg-transparent border border-gray-200 dark:border-white/8 rounded-xl p-4">
+                <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-3">Sorteer alle records:</p>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="sortAllRecords('date')"
+                        class="px-3 py-1.5 text-xs font-medium bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-600/40 rounded-lg transition flex items-center gap-1">
+                        Datum {!! $sortHeaderSvg !!}
+                    </button>
+                    <button type="button" onclick="sortAllRecords('action')"
+                        class="px-3 py-1.5 text-xs font-medium bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-600/40 rounded-lg transition flex items-center gap-1">
+                        Actie {!! $sortHeaderSvg !!}
+                    </button>
+                    <button type="button" onclick="sortAllRecords('time')"
+                        class="px-3 py-1.5 text-xs font-medium bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-600/40 rounded-lg transition flex items-center gap-1">
+                        Uren {!! $sortHeaderSvg !!}
+                    </button>
+                    <button type="button" onclick="sortAllRecords('costs')"
+                        class="px-3 py-1.5 text-xs font-medium bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-600/40 rounded-lg transition flex items-center gap-1">
+                        Kosten {!! $sortHeaderSvg !!}
+                    </button>
+                </div>
+            </div>
+
+            <script>
+                function sortAllRecords(field) {
+                    const tables = document.querySelectorAll('table');
+                    tables.forEach(table => {
+                        sortGroup(table.id, field);
+                    });
+                }
+            </script>
+
+            {{-- Grouped records --}}
 
             @forelse($groups as $groupName => $records)
                 @php
                     $tableId = 'table-' . Str::slug($groupName);
                 @endphp
                 <div
-                    class="border border-gray-200 dark:border-white/8 bg-white dark:bg-[#131928] rounded-xl p-5 mb-4 shadow-sm dark:shadow-none">
+                    class="border border-gray-200 dark:border-white/8 bg-white dark:bg-transparent rounded-xl p-5 mb-4 shadow-sm dark:shadow-none">
 
                     {{-- Group header --}}
                     <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
@@ -1243,11 +1276,7 @@
                                     </th>
                                     <th
                                         class="pb-2 pr-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                        <button type="button" data-sort-field="worker"
-                                            onclick="sortGroup('{{ $tableId }}', 'worker')"
-                                            class="flex items-center gap-1 hover:text-gray-400 transition cursor-pointer">
-                                            Medewerker {!! $sortHeaderSvg !!}
-                                        </button>
+                                        Medewerker
                                     </th>
                                     <th
                                         class="pb-2 pr-4 text-right text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-nowrap">
@@ -1273,7 +1302,6 @@
                                         data-sort_date="{{ $record->date ?? '' }}"
                                         data-sort_action="{{ $record->action ?? '' }}"
                                         data-sort_description="{{ $record->description ?? '' }}"
-                                        data-sort_worker="{{ $record->worker ?? '' }}"
                                         data-sort_time="{{ $record->time ?? 0 }}"
                                         data-sort_costs="{{ $record->costs ?? 0 }}">
                                         <td class="py-2.5 pr-4 text-gray-400 mono whitespace-nowrap text-xs">

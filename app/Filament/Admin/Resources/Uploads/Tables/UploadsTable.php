@@ -3,9 +3,7 @@
 namespace App\Filament\Admin\Resources\Uploads\Tables;
 
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -16,8 +14,10 @@ class UploadsTable
         return $table
             ->columns([
                 TextColumn::make('filename')
+                    ->sortable()
                     ->searchable(),
                 TextColumn::make('status')
+                    ->sortable()
                     ->badge(),
                 TextColumn::make('processed_rows')
                     ->numeric()
@@ -46,10 +46,7 @@ class UploadsTable
                 //
             ])
             ->paginationPageOptions([25, 50, 100, 250, 500])
-            ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
+            ->recordActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

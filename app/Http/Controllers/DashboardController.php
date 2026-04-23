@@ -713,7 +713,7 @@ class DashboardController extends Controller
             'groups' => $groups,
             'paginatedRecords' => $records,
             'pageTitle' => 'Records per kosten',
-            'pageSubtitle' => 'Medewerkers gerangschikt op totale kosten (hoogste eerst)',
+            'pageSubtitle' => 'Medewerkers gerangschikt op totale kosten',
             'search' => $search,
             'fromDate' => $fromDate,
             'toDate' => $toDate,

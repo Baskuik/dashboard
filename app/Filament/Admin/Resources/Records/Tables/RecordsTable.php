@@ -2,10 +2,6 @@
 
 namespace App\Filament\Admin\Resources\Records\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -94,16 +90,6 @@ class RecordsTable
             ->recordActions([
                 ViewAction::make()
                     ->label('Bekijken'),
-                EditAction::make()
-                    ->label('Bewerken'),
-                DeleteAction::make()
-                    ->label('Verwijderen'),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->label('Verwijderen'),
-                ]),
             ]);
     }
 }

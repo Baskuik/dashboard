@@ -5,9 +5,10 @@ use App\Http\Controllers\DashboardWidgetController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
-    return view('welcome');
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
 // --------------------------------------------------------

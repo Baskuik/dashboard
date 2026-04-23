@@ -2,8 +2,6 @@
 
 namespace App\Filament\Admin\Resources\Records;
 
-use App\Filament\Admin\Resources\Records\Pages\CreateRecord;
-use App\Filament\Admin\Resources\Records\Pages\EditRecord;
 use App\Filament\Admin\Resources\Records\Pages\ListRecords;
 use App\Filament\Admin\Resources\Records\Pages\ViewRecord;
 use App\Filament\Admin\Resources\Records\Schemas\RecordForm;
@@ -50,9 +48,7 @@ class RecordResource extends Resource
     {
         return [
             'index' => ListRecords::route('/'),
-            'create' => CreateRecord::route('/create'),
             'view' => ViewRecord::route('/{record}'),
-            'edit' => EditRecord::route('/{record}/edit'),
         ];
     }
 }
