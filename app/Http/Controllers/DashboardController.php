@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Record;
 use App\Models\Upload;
 use App\Models\UserDashboardWidget;
+use App\Exports\RecordsExport;
+use App\Exports\RecordsSummaryExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -20,10 +23,18 @@ class DashboardController extends Controller
      * Returns stats for the authenticated user.
      * Only includes records from the latest upload.
      * All values default to 0 when no records exist.
+     * Results are cached for 15 minutes.
      */
     private function getStats(): array
     {
         $userId = Auth::id();
+        $cacheKey = "dashboard_stats_{$userId}";
+
+        // Try to get from cache first
+        $stats = Cache::get($cacheKey);
+        if ($stats !== null) {
+            return $stats;
+        }
 
         // Get only the latest upload
         $latestUpload = Upload::where('user_id', $userId)
@@ -31,33 +42,46 @@ class DashboardController extends Controller
             ->first();
 
         if (!$latestUpload) {
-            return [
+            $stats = [
                 'total_actions' => 0,
                 'total_cost' => 0,
                 'avg_duration' => 0,
                 'total_employees' => 0,
             ];
+        } else {
+            $records = Record::where('user_id', $userId)
+                ->where('upload_id', $latestUpload->bestand_id);
+
+            $stats = [
+                'total_actions' => (clone $records)->count(),
+                'total_cost' => (clone $records)->sum('costs') ?? 0,
+                'avg_duration' => (clone $records)->avg('time') ?? 0,
+                'total_employees' => (clone $records)->distinct()->count('worker'),
+            ];
         }
 
-        $records = Record::where('user_id', $userId)
-            ->where('upload_id', $latestUpload->bestand_id);
+        // Cache for 15 minutes
+        Cache::put($cacheKey, $stats, 900);
 
-        return [
-            'total_actions' => (clone $records)->count(),
-            'total_cost' => (clone $records)->sum('costs') ?? 0,
-            'avg_duration' => (clone $records)->avg('time') ?? 0,
-            'total_employees' => (clone $records)->distinct()->count('worker'),
-        ];
+        return $stats;
     }
 
     /**
      * Returns chart data for the authenticated user.
      * Only includes records from the latest upload.
      * Arrays are empty when no records exist – Chart.js handles this gracefully.
+     * Results are cached for 15 minutes.
      */
     private function getChartData(): array
     {
         $userId = Auth::id();
+        $cacheKey = "dashboard_chart_{$userId}";
+
+        // Try to get from cache first
+        $data = Cache::get($cacheKey);
+        if ($data !== null) {
+            return $data;
+        }
 
         // Get only the latest upload
         $latestUpload = Upload::where('user_id', $userId)
@@ -93,12 +117,24 @@ class DashboardController extends Controller
             ->pluck('count', 'action')
             ->toArray();
 
-        return compact('actionsPerMonth', 'costPerEmployee', 'actionsByType');
+        $data = compact('actionsPerMonth', 'costPerEmployee', 'actionsByType');
+
+        // Cache for 15 minutes
+        Cache::put($cacheKey, $data, 900);
+
+        return $data;
     }
 
     private function getKostenPerMaand(): array
     {
         $userId = Auth::id();
+        $cacheKey = "dashboard_kosten_{$userId}";
+
+        // Try to get from cache first
+        $data = Cache::get($cacheKey);
+        if ($data !== null) {
+            return $data;
+        }
 
         // Get only the latest upload
         $latestUpload = Upload::where('user_id', $userId)
@@ -111,13 +147,18 @@ class DashboardController extends Controller
             $query->where('upload_id', $latestUpload->bestand_id);
         }
 
-        return $query
+        $data = $query
             ->whereNotNull('date')
             ->selectRaw("DATE_FORMAT(date, '%Y-%m') as month, SUM(costs) as total")
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('total', 'month')
             ->toArray();
+
+        // Cache for 15 minutes
+        Cache::put($cacheKey, $data, 900);
+
+        return $data;
     }
 
     // -------------------------------------------------------
@@ -225,7 +266,19 @@ class DashboardController extends Controller
             ->toArray();
 
         // Paginated records for display
-        $sortedRecords = $records->sortByDesc('date')->values();
+        $sortBy = $request->get('sort_by', 'date');
+        $sortDir = $request->get('sort_dir', 'desc');
+
+        // Validate sort direction
+        $sortDir = in_array($sortDir, ['asc', 'desc']) ? $sortDir : 'desc';
+
+        // Sort by the requested column
+        if ($sortDir === 'asc') {
+            $sortedRecords = $records->sortBy($sortBy)->values();
+        } else {
+            $sortedRecords = $records->sortByDesc($sortBy)->values();
+        }
+
         $perPage = 25;
         $page = $request->get('page', 1);
         $paginatedRecords = new LengthAwarePaginator(
@@ -375,11 +428,10 @@ class DashboardController extends Controller
         $toDate = $request->get('to_date');
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
+        $sortBy = $request->get('sort_by', 'worker');
+        $sortDir = $request->get('sort_dir', 'asc');
 
-        $records = Record::where('user_id', Auth::id())
-            ->orderBy('worker')
-            ->orderByDesc('date')
-            ->get();
+        $records = Record::where('user_id', Auth::id())->get();
 
         // Filter by search term if provided
         if ($search) {
@@ -413,10 +465,45 @@ class DashboardController extends Controller
             });
         }
 
+        // Group records FIRST, then sort within groups
         $groups = $records->groupBy('worker');
+
+        // Sort groups based on sort_by parameter
+        if ($sortBy === 'worker') {
+            // Sort groups by worker name
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortKeys();
+            } else {
+                $groups = $groups->sortKeys()->reverse();
+            }
+        } else {
+            // Sort groups by aggregate of the sort field
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortBy(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->min('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->first()?->{$sortBy};
+                });
+            } else {
+                $groups = $groups->sortByDesc(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->max('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->last()?->{$sortBy};
+                });
+            }
+        }
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
+            'paginatedRecords' => $records,
             'pageTitle' => 'Records per medewerker',
             'pageSubtitle' => 'Alle acties gegroepeerd per medewerker, gesorteerd op datum',
             'search' => $search,
@@ -424,6 +511,10 @@ class DashboardController extends Controller
             'toDate' => $toDate,
             'minCost' => $minCost,
             'maxCost' => $maxCost,
+            'stats' => $this->getStats(),
+            'chartData' => $this->getChartData(),
+            'kostenPerMaand' => $this->getKostenPerMaand(),
+            'selectedWidgets' => Auth::user()->dashboardWidgets()->orderBy('order')->pluck('widget_key')->toArray(),
         ]);
     }
 
@@ -438,11 +529,10 @@ class DashboardController extends Controller
         $toDate = $request->get('to_date');
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
+        $sortBy = $request->get('sort_by', 'action');
+        $sortDir = $request->get('sort_dir', 'asc');
 
-        $records = Record::where('user_id', Auth::id())
-            ->orderBy('action')
-            ->orderByDesc('date')
-            ->get();
+        $records = Record::where('user_id', Auth::id())->get();
 
         // Filter by search term if provided
         if ($search) {
@@ -476,10 +566,51 @@ class DashboardController extends Controller
             });
         }
 
+        // Apply sorting
+        if ($sortDir === 'asc') {
+            $records = $records->sortBy($sortBy)->values();
+        } else {
+            $records = $records->sortByDesc($sortBy)->values();
+        }
+
         $groups = $records->groupBy('action');
+
+        // Sort groups based on sort_by parameter
+        if ($sortBy === 'action') {
+            // Sort groups by action name
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortKeys();
+            } else {
+                $groups = $groups->sortKeys()->reverse();
+            }
+        } else {
+            // Sort groups by aggregate of the sort field
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortBy(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->min('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->first()?->{$sortBy};
+                });
+            } else {
+                $groups = $groups->sortByDesc(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->max('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->last()?->{$sortBy};
+                });
+            }
+        }
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
+            'paginatedRecords' => $records,
             'pageTitle' => 'Records per actie',
             'pageSubtitle' => 'Alle acties gegroepeerd op actietype, gesorteerd op datum',
             'search' => $search,
@@ -487,6 +618,10 @@ class DashboardController extends Controller
             'toDate' => $toDate,
             'minCost' => $minCost,
             'maxCost' => $maxCost,
+            'stats' => $this->getStats(),
+            'chartData' => $this->getChartData(),
+            'kostenPerMaand' => $this->getKostenPerMaand(),
+            'selectedWidgets' => Auth::user()->dashboardWidgets()->orderBy('order')->pluck('widget_key')->toArray(),
         ]);
     }
 
@@ -501,10 +636,10 @@ class DashboardController extends Controller
         $toDate = $request->get('to_date');
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
+        $sortBy = $request->get('sort_by', 'costs');
+        $sortDir = $request->get('sort_dir', 'desc');
 
-        $records = Record::where('user_id', Auth::id())
-            ->orderByDesc('costs')
-            ->get();
+        $records = Record::where('user_id', Auth::id())->get();
 
         // Filter by search term if provided
         if ($search) {
@@ -538,20 +673,56 @@ class DashboardController extends Controller
             });
         }
 
+        // Group records FIRST, then sort within groups
         $groups = $records->groupBy('worker');
 
-        // Sort groups by their total costs descending
-        $groups = $groups->sortByDesc(fn($recs) => $recs->sum('costs'));
+        // Sort groups based on sort_by parameter
+        if ($sortBy === 'worker') {
+            // Sort groups by worker name
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortKeys();
+            } else {
+                $groups = $groups->sortKeys()->reverse();
+            }
+        } else {
+            // Sort groups by aggregate of the sort field
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortBy(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->min('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->first()?->{$sortBy};
+                });
+            } else {
+                $groups = $groups->sortByDesc(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->max('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->last()?->{$sortBy};
+                });
+            }
+        }
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
+            'paginatedRecords' => $records,
             'pageTitle' => 'Records per kosten',
-            'pageSubtitle' => 'Medewerkers gerangschikt op totale kosten (hoogste eerst)',
+            'pageSubtitle' => 'Medewerkers gerangschikt op totale kosten',
             'search' => $search,
             'fromDate' => $fromDate,
             'toDate' => $toDate,
             'minCost' => $minCost,
             'maxCost' => $maxCost,
+            'stats' => $this->getStats(),
+            'chartData' => $this->getChartData(),
+            'kostenPerMaand' => $this->getKostenPerMaand(),
+            'selectedWidgets' => Auth::user()->dashboardWidgets()->orderBy('order')->pluck('widget_key')->toArray(),
         ]);
     }
 
@@ -566,10 +737,10 @@ class DashboardController extends Controller
         $toDate = $request->get('to_date');
         $minCost = $request->get('min_cost');
         $maxCost = $request->get('max_cost');
+        $sortBy = $request->get('sort_by', 'time');
+        $sortDir = $request->get('sort_dir', 'desc');
 
-        $records = Record::where('user_id', Auth::id())
-            ->orderByDesc('time')
-            ->get();
+        $records = Record::where('user_id', Auth::id())->get();
 
         // Filter by search term if provided
         if ($search) {
@@ -603,12 +774,45 @@ class DashboardController extends Controller
             });
         }
 
+        // Group records FIRST, then sort within groups
         $groups = $records->groupBy('worker');
 
-        $groups = $groups->sortByDesc(fn($recs) => $recs->sum('time'));
+        // Sort groups based on sort_by parameter
+        if ($sortBy === 'worker') {
+            // Sort groups by worker name
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortKeys();
+            } else {
+                $groups = $groups->sortKeys()->reverse();
+            }
+        } else {
+            // Sort groups by aggregate of the sort field
+            if ($sortDir === 'asc') {
+                $groups = $groups->sortBy(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->min('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->first()?->{$sortBy};
+                });
+            } else {
+                $groups = $groups->sortByDesc(function ($recs) use ($sortBy) {
+                    if ($sortBy === 'date')
+                        return $recs->max('date');
+                    if ($sortBy === 'costs')
+                        return $recs->sum('costs');
+                    if ($sortBy === 'time')
+                        return $recs->sum('time');
+                    return $recs->last()?->{$sortBy};
+                });
+            }
+        }
 
         return view('dashboard.records-grouped', [
             'groups' => $groups,
+            'paginatedRecords' => $records,
             'pageTitle' => 'Records per duur',
             'pageSubtitle' => 'Medewerkers gerangschikt op totale uren (meeste eerst)',
             'search' => $search,
@@ -616,6 +820,123 @@ class DashboardController extends Controller
             'toDate' => $toDate,
             'minCost' => $minCost,
             'maxCost' => $maxCost,
+            'stats' => $this->getStats(),
+            'chartData' => $this->getChartData(),
+            'kostenPerMaand' => $this->getKostenPerMaand(),
+            'selectedWidgets' => Auth::user()->dashboardWidgets()->orderBy('order')->pluck('widget_key')->toArray(),
         ]);
+    }
+
+    // -------------------------------------------------------
+    // Export Methods
+    // -------------------------------------------------------
+
+    /**
+     * Exports filtered records to XLSX format.
+     * Respects all applied filters (search, date range, cost range).
+     */
+    public function exportCSV(Request $request)
+    {
+        $currency = $request->get('currency', 'EUR');
+        $records = $this->getFilteredRecords($request);
+
+        $fileName = 'records_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        $export = new RecordsExport($records, $currency);
+        $spreadsheet = $export->toSpreadsheet();
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        return response()->stream(
+            function () use ($writer) {
+                $writer->save('php://output');
+            },
+            200,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+                'Pragma' => 'public',
+            ]
+        );
+    }
+
+    /**
+     * Helper method to get filtered records based on request parameters.
+     */
+    private function getFilteredRecords(Request $request)
+    {
+        $search = $request->get('search', '');
+        $fromDate = $request->get('from_date');
+        $toDate = $request->get('to_date');
+        $minCost = $request->get('min_cost');
+        $maxCost = $request->get('max_cost');
+
+        $records = Record::where('user_id', Auth::id())->get();
+
+        // Filter by search term if provided
+        if ($search) {
+            $records = $records->filter(function ($record) use ($search) {
+                return stripos($record->worker, $search) !== false ||
+                    stripos($record->action, $search) !== false;
+            });
+        }
+
+        // Filter by date range if provided
+        if ($fromDate) {
+            $records = $records->filter(function ($record) use ($fromDate) {
+                return $record->date && $record->date >= $fromDate;
+            });
+        }
+        if ($toDate) {
+            $records = $records->filter(function ($record) use ($toDate) {
+                return $record->date && $record->date <= $toDate;
+            });
+        }
+
+        // Filter by cost range if provided
+        if ($minCost !== null && $minCost !== '') {
+            $records = $records->filter(function ($record) use ($minCost) {
+                return $record->costs >= (float) $minCost;
+            });
+        }
+        if ($maxCost !== null && $maxCost !== '') {
+            $records = $records->filter(function ($record) use ($maxCost) {
+                return $record->costs <= (float) $maxCost;
+            });
+        }
+
+        return $records;
+    }
+
+    /**
+     * Exports summary statistics to XLSX format.
+     * Creates grouped summary by employee or action.
+     */
+    public function exportSummaryCSV(Request $request)
+    {
+        $groupBy = $request->get('group_by', 'medewerker');
+        $currency = $request->get('currency', 'EUR');
+        $records = $this->getFilteredRecords($request);
+
+        $fileName = 'records_summary_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        $export = new RecordsSummaryExport($records, $groupBy, $currency);
+        $spreadsheet = $export->toSpreadsheet();
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        return response()->stream(
+            function () use ($writer) {
+                $writer->save('php://output');
+            },
+            200,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+                'Pragma' => 'public',
+            ]
+        );
     }
 }

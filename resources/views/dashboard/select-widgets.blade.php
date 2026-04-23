@@ -10,6 +10,9 @@
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
+
+    {{-- GSAP Animation Library --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
         body {
             font-family: 'DM Sans', sans-serif;
@@ -111,6 +114,48 @@
         });
 
         // User menu dropdown handled by navbar component
+    </script>
+
+    <script>
+        // GSAP Animations - Widget Selection
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate widget cards - fade in + scale
+            gsap.to('.widget-card', {
+                duration: 0.6,
+                opacity: 1,
+                scale: 1,
+                stagger: 0.1,
+                ease: 'back.out',
+            });
+            gsap.set('.widget-card', {
+                opacity: 0,
+                scale: 0.9
+            });
+
+            // Card hover animation
+            document.querySelectorAll('.widget-card').forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    gsap.to(this, {
+                        duration: 0.3,
+                        scale: 1.05,
+                        borderColor: 'rgba(59, 130, 246, 0.7)',
+                        boxShadow: '0 10px 30px rgba(59, 130, 246, 0.15)',
+                        ease: 'power2.out',
+                    });
+                });
+                card.addEventListener('mouseleave', function() {
+                    const isChecked = this.querySelector('.widget-checkbox').checked;
+                    gsap.to(this, {
+                        duration: 0.3,
+                        scale: 1,
+                        borderColor: isChecked ? 'rgba(59, 130, 246, 0.5)' :
+                            'rgba(255, 255, 255, 0.1)',
+                        boxShadow: 'none',
+                        ease: 'power2.out',
+                    });
+                });
+            });
+        });
     </script>
 </body>
 

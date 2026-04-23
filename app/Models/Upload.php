@@ -15,6 +15,11 @@ class Upload extends Model
         'filename',
         'status',
         'processed_rows',
+        'expires_at',
+    ];
+
+    protected $casts = [
+        'expires_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

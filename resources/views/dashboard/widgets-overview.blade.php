@@ -12,6 +12,9 @@
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
+
+    {{-- GSAP Animation Library --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
         body {
             font-family: 'DM Sans', sans-serif;
@@ -91,6 +94,44 @@
             </a>
         </div>
     </main>
+
+    <script>
+        // GSAP Animations - Widgets Overview
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate widget overview cards
+            gsap.to('.grid > div', {
+                duration: 0.6,
+                opacity: 1,
+                y: 0,
+                stagger: 0.1,
+                ease: 'power2.out',
+            });
+            gsap.set('.grid > div', {
+                opacity: 0,
+                y: 20
+            });
+
+            // Hover animation for widget cards
+            document.querySelectorAll('.grid > div').forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    gsap.to(this, {
+                        duration: 0.3,
+                        scale: 1.03,
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        ease: 'power2.out',
+                    });
+                });
+                card.addEventListener('mouseleave', function() {
+                    gsap.to(this, {
+                        duration: 0.3,
+                        scale: 1,
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        ease: 'power2.out',
+                    });
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>

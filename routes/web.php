@@ -5,9 +5,10 @@ use App\Http\Controllers\DashboardWidgetController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
-    return view('welcome');
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
 // --------------------------------------------------------
@@ -49,8 +50,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/dashboard-data', [DashboardController::class, 'getFilteredData'])->name('api.dashboard-data');
 
     // Export endpoints
-    Route::get('/export/records', [\App\Http\Controllers\ExportController::class, 'exportRecords'])->name('export.records');
-    Route::get('/export/summary', [\App\Http\Controllers\ExportController::class, 'exportSummary'])->name('export.summary');
+    Route::get('/export/records-csv', [DashboardController::class, 'exportCSV'])->name('export.records-csv');
+    Route::get('/export/summary-csv', [DashboardController::class, 'exportSummaryCSV'])->name('export.summary-csv');
 
     // Logout
     Route::post('/logout', function () {
